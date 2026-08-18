@@ -12,8 +12,8 @@ from investigator.domain.models import (
 )
 
 
-def hypothesis_test_accpets_vaild_confidence() -> None:
-    hypothesis = hypothesis(
+def test_hypothesis_accpets_vaild_confidence() -> None:
+    hypothesis = Hypothesis(
         hypothesis_id="H1",
         description="just testing hypothesis",
         confidence=0.31
@@ -21,8 +21,16 @@ def hypothesis_test_accpets_vaild_confidence() -> None:
     assert hypothesis.confidence == 0.31
 
 
+def test_hypothesis_rejects_invalid_confidence() -> None:
+    with pytest.raises(ValueError):
+        Hypothesis(
+            hypothesis_id="H1",
+            description="Invalid hypothesis",
+            confidence=1.5,
+        )
 
-def investigation_test_starts_pending() -> None:
+
+def test_investigation_starts_pending() -> None:
     investigation = Investigation(
         investigation_id="INV-922",
         problem="investigation acccuracy drop"
@@ -35,7 +43,7 @@ def investigation_test_starts_pending() -> None:
 
 
 
-def experiment_test_as_pending() -> None:
+def test_experiment_as_pending() -> None:
     experiment = Experiment(
         experiment_id="EXP-001",
         purpose="Inspect recent preprocessing changes",
@@ -48,14 +56,16 @@ def experiment_test_as_pending() -> None:
     assert experiment.status == ExperimentStatus.PENDING
 
 
-
-def experiment_test_result__stored_observations() -> None:
+def test_experiment_result_stored_observations() -> None:
     result = ExperimentResult(
         experiment_id="EXP-001",
         status=ExperimentStatus.SUCCEEDED,
-        observations=[
+        obeservation=[
             "Normalization code changed.",
         ],
     )
     assert result.status == ExperimentStatus.SUCCEEDED
-    assert len(result.observations) == 1
+    assert len(result.obeservation) == 1
+
+
+
