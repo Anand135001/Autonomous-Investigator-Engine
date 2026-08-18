@@ -29,7 +29,7 @@ class Evidence:
 
     evidence_id: str
     source: str
-    obeservation: str
+    observation: str
     experiment_id: str | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
 
@@ -68,7 +68,7 @@ class ExperimentResult:
 
     experiment_id: str
     status: ExperimentStatus
-    obeservation: list[str] = field(default_factory=list)
+    observation: list[str] = field(default_factory=list)
     artifacts: list[str] = field(default_factory=list)
     error: str | None = None
 
