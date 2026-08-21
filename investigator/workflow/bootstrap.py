@@ -3,9 +3,8 @@ from investigator.investigation.manager import InvestigationManager
 from investigator.tools.git import inspect_git_history
 from investigator.investigation.evidence import build_git_history_evidence 
 
-def run_initial_investigation(
-      manager: InvestigationManager,
-      repository_path: str,  
+
+def run_initial_investigation( manager: InvestigationManager, repository_path: str,  
 ) -> Investigation:
 
     """
@@ -92,5 +91,33 @@ def run_initial_investigation(
         hypothesis_id="H1",
         confidence=0.45,
     )
+
+
+    remaining_hypotheses = [
+        hypothesis
+        for hypothesis in investigation.hypotheses
+        if hypothesis.hypothesis_id != "H1"
+    ]
+
+    remaining_total = sum(
+        hypothesis.confidence
+        for hypothesis in remaining_hypotheses
+    )
+
+    remaining_probability = 1.0 - 0.45
+
+    for hypothesis in remaining_hypotheses:
+        updated_confidence = (
+            hypothesis.confidence
+            / remaining_total
+            * remaining_probability
+        )
+
+        manager.update_hypothesis_confidence(
+            investigation,
+            hypothesis_id=hypothesis.hypothesis_id,
+            confidence=updated_confidence,
+        )
+    
 
     return investigation

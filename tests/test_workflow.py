@@ -1,5 +1,6 @@
 from pathlib import Path
 import subprocess
+import pytest
 
 from investigator.domain.models import InvestigationStatus
 from investigator.investigation.manager import InvestigationManager
@@ -106,3 +107,10 @@ def test_initial_investigation_workflow(
     )
 
     assert preprocessing.confidence == 0.45
+
+    total_confidence = sum(
+        hypothesis.confidence
+        for hypothesis in investigation.hypotheses
+    )
+
+    assert total_confidence == pytest.approx(1.0)
