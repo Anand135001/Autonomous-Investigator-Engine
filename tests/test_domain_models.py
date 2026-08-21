@@ -9,6 +9,7 @@ from investigator.domain.models import (
     Hypothesis,
     Investigation,
     InvestigationStatus,
+    ExperimentCandidate
 )
 
 
@@ -69,3 +70,33 @@ def test_experiment_result_stored_observations() -> None:
 
 
 
+def test_experiment_candidate_accepts_valid_values() -> None:
+    candidate = ExperimentCandidate(
+        experiment_id="EXP-001",
+        purpose="Inspect recent preprocessing changes",
+        target_hypothesis_ids=["H1", "H5"],
+        rationale="Recent code changes may explain the regression.",
+        expected_information_gain=0.8,
+        hypothesis_coverage=0.7,
+        estimated_cost=1.0,
+        risk_level="low",
+        timeout_seconds=60,
+    )
+
+    assert candidate.expected_information_gain == 0.8
+    assert candidate.hypothesis_coverage == 0.7
+
+
+def test_experiment_candidate_rejects_invalid_information_gain() -> None:
+    with pytest.raises(ValueError):
+        ExperimentCandidate(
+            experiment_id="EXP-001",
+            purpose="Test",
+            target_hypothesis_ids=["H1"],
+            rationale="Test",
+            expected_information_gain=1.5,
+            hypothesis_coverage=0.5,
+            estimated_cost=1.0,
+            risk_level="low",
+            timeout_seconds=60,
+        )
