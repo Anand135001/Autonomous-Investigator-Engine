@@ -86,6 +86,43 @@ class Investigation:
     results: list[ExperimentResult] = field(default_factory=list)
 
 
+@dataclass
+class ExperimentCandidate:
+    """ candidate experiment considered during planning."""
 
-        
-   
+    experiment_id: str
+    purpose: str
+    target_hypothesis_ids: list[str]
+    rationale: str
+    expected_information_gain: float
+    hypothesis_coverage: float
+    estimated_cost: float
+    risk_level: str
+    timeout_seconds: int
+    allowed_tools: list[str] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        if not 0.0 <= self.expected_information_gain <= 1.0:
+            raise ValueError(
+                "expected_information_gain must be between 0.0 and 1.0"
+            )
+
+        if not 0.0 <= self.hypothesis_coverage <= 1.0:
+            raise ValueError(
+                "hypothesis_coverage must be between 0.0 and 1.0"
+            )
+
+        if self.estimated_cost < 0:
+            raise ValueError(
+                "estimated_cost cannot be negative"
+            )
+
+        if self.timeout_seconds <= 0:
+            raise ValueError(
+                "timeout_seconds must be greater than zero"
+            )
+
+        if not self.target_hypothesis_ids:
+            raise ValueError(
+                "target_hypothesis_ids cannot be empty"
+            )
