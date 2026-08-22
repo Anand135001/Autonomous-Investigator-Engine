@@ -3,7 +3,7 @@ import subprocess
 
 import pytest
 
-from investigator.tools.git import inspect_git_history
+from investigator.tools.git import inspect_git_history, compare_git_revisions
 
 
 def initialize_git_repository(path: Path) -> None:
@@ -52,9 +52,7 @@ def create_commit(
     )
 
 
-def test_inspect_git_history_returns_recent_commits(
-    tmp_path: Path,
-) -> None:
+def test_inspect_git_history_returns_recent_commits(tmp_path: Path,) -> None:
     initialize_git_repository(tmp_path)
 
     create_commit(
@@ -87,27 +85,66 @@ def test_inspect_git_history_returns_recent_commits(
     ]
 
 
-def test_inspect_git_history_rejects_invalid_limit(
-    tmp_path: Path,
-) -> None:
+def test_inspect_git_history_rejects_invalid_limit(tmp_path: Path,) -> None:
     with pytest.raises(ValueError):
         inspect_git_history(str(tmp_path), limit=0)
 
 
-def test_inspect_git_history_rejects_missing_repository(
-    tmp_path: Path,
-) -> None:
+def test_inspect_git_history_rejects_missing_repository(tmp_path: Path,) -> None:
     missing_path = tmp_path / "missing"
 
     with pytest.raises(FileNotFoundError):
         inspect_git_history(str(missing_path))
 
 
-def test_inspect_git_history_rejects_file_path(
-    tmp_path: Path,
-) -> None:
+def test_inspect_git_history_rejects_file_path(tmp_path: Path,) -> None:
     file_path = tmp_path / "not-a-directory"
     file_path.write_text("hello", encoding="utf-8")
 
     with pytest.raises(NotADirectoryError):
         inspect_git_history(str(file_path))
+
+
+
+def test_compare_git_revisions_returns_diff_stat(tmp_path: Path,) -> None:
+    initialize_git_repository(tmp_path)
+
+    create_commit(
+        tmp_path,
+        "preprocess.py",
+        "normalization_v1\n",
+        "initial preprocessing",
+    )
+
+    base_revision = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+
+    create_commit(
+        tmp_path,
+        "preprocess.py",
+        "normalization_v2\n",
+        "change preprocessing",
+    )
+
+    target_revision = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+
+    result = compare_git_revisions(
+        str(tmp_path),
+        base_revision,
+        target_revision,
+    )
+
+    assert result["base_revision"] == base_revision
+    assert result["target_revision"] == target_revision
+    assert "preprocess.py" in result["diff_stat"]
