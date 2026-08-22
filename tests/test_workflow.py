@@ -4,9 +4,8 @@ import pytest
 
 from investigator.domain.models import InvestigationStatus
 from investigator.investigation.manager import InvestigationManager
-from investigator.workflow.bootstrap import (
-    run_initial_investigation,
-)
+from investigator.workflow.bootstrap import run_initial_investigation, run_adaptive_investigation
+from investigator.domain.models import ExperimentStatus
 
 
 def initialize_git_repository(path: Path) -> None:
@@ -58,9 +57,7 @@ def create_commit(
     )
 
 
-def test_initial_investigation_workflow(
-    tmp_path: Path,
-) -> None:
+def test_initial_investigation_workflow(tmp_path: Path,) -> None:
     initialize_git_repository(tmp_path)
 
     create_commit(
@@ -79,15 +76,9 @@ def test_initial_investigation_workflow(
 
     manager = InvestigationManager()
 
-    investigation = run_initial_investigation(
-        manager=manager,
-        repository_path=str(tmp_path),
-    )
+    investigation = run_initial_investigation(manager=manager, repository_path=str(tmp_path),)
 
-    assert (
-        investigation.status
-        == InvestigationStatus.RUNNING
-    )
+    assert (investigation.status == InvestigationStatus.RUNNING)
 
     assert investigation.investigation_id == "INV-001"
 
@@ -107,6 +98,56 @@ def test_initial_investigation_workflow(
     )
 
     assert preprocessing.confidence == 0.45
+
+    total_confidence = sum(
+        hypothesis.confidence
+        for hypothesis in investigation.hypotheses
+    )
+
+    assert total_confidence == pytest.approx(1.0)
+
+
+
+def test_adaptive_investigation_selects_and_executes_experiment(tmp_path: Path,) -> None:
+    initialize_git_repository(tmp_path)
+
+    create_commit(
+        tmp_path,
+        "preprocess.py",
+        "normalization_v1\n",
+        "initial preprocessing",
+    )
+
+    create_commit(
+        tmp_path,
+        "preprocess.py",
+        "normalization_v2\n",
+        "change preprocessing",
+    )
+
+    manager = InvestigationManager()
+
+    investigation = run_adaptive_investigation(
+        manager=manager,
+        repository_path=str(tmp_path),
+    )
+
+    assert len(investigation.experiments) == 1
+    assert (investigation.experiments[0].experiment_id == "EXP-GIT-DIFF")
+
+    assert len(investigation.results) == 1
+
+    assert (investigation.results[0].status == ExperimentStatus.SUCCEEDED)
+
+    assert len(investigation.evidence) == 2
+
+    h1 = next(
+        hypothesis
+        for hypothesis in investigation.hypotheses
+        if hypothesis.hypothesis_id == "H1"
+    )
+
+    assert h1.confidence == 0.45
 
     total_confidence = sum(
         hypothesis.confidence
