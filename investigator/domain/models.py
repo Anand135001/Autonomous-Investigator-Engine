@@ -68,7 +68,7 @@ class ExperimentResult:
 
     experiment_id: str
     status: ExperimentStatus
-    observation: list[str] = field(default_factory=list)
+    observations: list[str] = field(default_factory=list)
     artifacts: list[str] = field(default_factory=list)
     error: str | None = None
 

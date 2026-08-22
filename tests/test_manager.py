@@ -105,7 +105,7 @@ def test_add_experiment_and_result(manager: InvestigationManager, investigation,
     result = ExperimentResult(
         experiment_id="EXP-001",
         status=ExperimentStatus.SUCCEEDED,
-        observation=["Observed a preprocessing change."],
+        observations=["Observed a preprocessing change."],
     )
     manager.add_result(investigation, result,)
 

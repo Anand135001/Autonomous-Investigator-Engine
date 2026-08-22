@@ -61,12 +61,12 @@ def test_experiment_result_stored_observations() -> None:
     result = ExperimentResult(
         experiment_id="EXP-001",
         status=ExperimentStatus.SUCCEEDED,
-        observation=[
+        observations=[
             "Normalization code changed.",
         ],
     )
     assert result.status == ExperimentStatus.SUCCEEDED
-    assert len(result.observation) == 1
+    assert len(result.observations) == 1
 
 
 
