@@ -13,9 +13,11 @@ from investigator.domain.models import(
 
 from investigator.planning.candidates import CandidateGenerator
 from investigator.planning.planner import ExperimentPlanner
+from investigator.execution.executor import ExperimentExecutor
 
+MAX_EXPERIMENTS = 5
 
-def run_initial_investigation( manager: InvestigationManager, repository_path: str,) -> Investigation:
+def run_initial_investigation(manager: InvestigationManager, repository_path: str,) -> Investigation:
     """
     Run the first deterministic investigation workflow.
 
@@ -131,13 +133,108 @@ def run_initial_investigation( manager: InvestigationManager, repository_path: s
     return investigation
 
 
+def candidate_to_experiment(candidate) -> Experiment:
+    return Experiment(
+        experiment_id=candidate.experiment_id,
+        purpose=candidate.purpose,
+        target_hypothesis_id=(
+            candidate.target_hypothesis_ids[0]
+        ),
+        rationale=candidate.rationale,
+        estimated_cost=candidate.estimated_cost,
+        timeout_seconds=candidate.timeout_seconds,
+        risk_level=candidate.risk_level,
+        allowed_tools=candidate.allowed_tools,
+    )
 
-def run_adaptive_investigation(manager: InvestigationManager, repository_path: str,) -> Investigation:
-    """
-    Run one complete deterministic adaptive investigation step.
 
-    Gemini is intentionally not involved yet.
-    """
+def result_to_evidence(result: ExperimentResult) -> list[Evidence]:
+
+    evidence_items: list[Evidence] = []
+
+    for index, observation in enumerate(
+        result.observations,
+        start=1,
+    ):
+        evidence_items.append(
+            Evidence(
+                evidence_id=(
+                    f"{result.experiment_id}-E{index}"
+                ),
+                source="experiment",
+                observation=observation,
+                experiment_id=result.experiment_id,
+                metadata={
+                    "status": result.status.value,
+                    "artifacts": result.artifacts,
+                },
+            )
+        )
+
+    return evidence_items
+
+
+def update_deterministic_beliefs(
+    manager: InvestigationManager,
+    investigation: Investigation,
+    experiment: Experiment,
+    result: ExperimentResult,
+) -> None:
+
+    if result.status != ExperimentStatus.SUCCEEDED:
+        return
+
+    confidence_by_experiment = {
+        "EXP-GIT-DIFF": 0.45,
+        "EXP-PREPROCESS-COMPARE": 0.82,
+        "EXP-REPRODUCE": 0.96,
+    }
+
+    new_confidence = confidence_by_experiment.get(experiment.experiment_id)
+
+    if new_confidence is None:
+        return
+
+    manager.update_hypothesis_confidence(investigation, "H1", new_confidence)
+
+    others = [
+        hypothesis
+        for hypothesis in investigation.hypotheses
+        if hypothesis.hypothesis_id != "H1"
+    ]
+
+    old_remaining_total = sum(
+        hypothesis.confidence
+        for hypothesis in others
+    )
+
+    new_remaining_total = 1.0 - new_confidence
+
+    for hypothesis in others:
+        manager.update_hypothesis_confidence(
+            investigation,
+            hypothesis.hypothesis_id,
+            (
+                hypothesis.confidence
+                / old_remaining_total
+                * new_remaining_total
+            ),
+        )
+
+
+def should_resolve(experiment: Experiment, result: ExperimentResult) -> bool:
+
+    return (
+        experiment.experiment_id == "EXP-REPRODUCE"
+        and result.status == ExperimentStatus.SUCCEEDED
+        and any(
+            "reproduction=PASS" in observation
+            for observation in result.observations
+        )
+    )
+
+
+def run_adaptive_investigation(manager: InvestigationManager, repository_path: str) -> Investigation:
 
     investigation = manager.create(
         investigation_id="INV-002",
@@ -180,109 +277,58 @@ def run_adaptive_investigation(manager: InvestigationManager, repository_path: s
 
     manager.start(investigation)
 
-    history_result = inspect_git_history(
-        repository_path,
-        limit=5,
-    )
-
-    history_evidence = build_git_history_evidence(
-        evidence_id="E001",
-        result=history_result,
-    )
-
-    manager.add_evidence(
-        investigation,
-        history_evidence,
-    )
-
-    candidate_generator = CandidateGenerator()
-    planner = ExperimentPlanner()
-
-    candidates = candidate_generator.generate(
-        investigation,
-    )
-
-    selected_candidate = planner.select_next_experiment(
-        candidates,
-    )
-
-    experiment = Experiment(
-        experiment_id=selected_candidate.experiment_id,
-        purpose=selected_candidate.purpose,
-        target_hypothesis_id=(
-            selected_candidate.target_hypothesis_ids[0]
-        ),
-        rationale=selected_candidate.rationale,
-        estimated_cost=selected_candidate.estimated_cost,
-        timeout_seconds=selected_candidate.timeout_seconds,
-        risk_level=selected_candidate.risk_level,
-        allowed_tools=selected_candidate.allowed_tools,
-    )
-
-    manager.add_experiment(
-        investigation,
-        experiment,
-    )
-
-    diff_result = compare_git_revisions(
-        repository_path,
-        "HEAD~1",
-        "HEAD",
-    )
-
-    experiment_result = ExperimentResult(
-        experiment_id=experiment.experiment_id,
-        status=ExperimentStatus.SUCCEEDED,
-        observations=[
-            diff_result["diff_stat"].strip(),
-        ],
-    )
-
-    manager.add_result(
-        investigation,
-        experiment_result,
-    )
+    # Initial evidence collection.
+    history_result = inspect_git_history(repository_path, limit=5)
 
     manager.add_evidence(
         investigation,
         Evidence(
-            evidence_id="E002",
+            evidence_id="E001",
             source="git",
             observation=(
-                "Compared the most recent two revisions "
-                "to identify changed files."
+                "Initial Git history inspection completed."
             ),
-            experiment_id=experiment.experiment_id,
-            metadata=diff_result,
+            metadata=history_result,
         ),
     )
 
-    manager.update_hypothesis_confidence(
-        investigation,
-        hypothesis_id="H1",
-        confidence=0.45,
-    )
+    candidate_generator = CandidateGenerator()
+    planner = ExperimentPlanner()
+    executor = ExperimentExecutor()
 
-    remaining_hypotheses = [
-        hypothesis
-        for hypothesis in investigation.hypotheses
-        if hypothesis.hypothesis_id != "H1"
-    ]
+    for _ in range(MAX_EXPERIMENTS):
 
-    remaining_total = sum(
-        hypothesis.confidence
-        for hypothesis in remaining_hypotheses
-    )
+        candidates = candidate_generator.generate(investigation)
 
-    remaining_probability = 1.0 - 0.45
+        if not candidates:
+            manager.mark_inconclusive(investigation)
+            break
 
-    for hypothesis in remaining_hypotheses:
-        manager.update_hypothesis_confidence(
+        selected_candidate = (planner.select_next_experiment(candidates))
+
+        experiment = candidate_to_experiment(selected_candidate)
+
+        manager.add_experiment(investigation, experiment)
+
+        result = executor.execute(experiment, repository_path)
+
+        manager.add_result(investigation, result)
+
+        for evidence in result_to_evidence(result):
+            manager.add_evidence(
+                investigation,
+                evidence,
+            )
+
+        update_deterministic_beliefs(
+            manager,
             investigation,
-            hypothesis_id=hypothesis.hypothesis_id,
-            confidence=(
-                hypothesis.confidence / remaining_total * remaining_probability
-            ),
+            experiment,
+            result,
         )
+
+        if should_resolve(experiment, result):
+            manager.resolve(investigation)
+            break
 
     return investigation

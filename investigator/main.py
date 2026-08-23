@@ -1,35 +1,46 @@
-from investigator.domain.models import Investigation
-from investigator.tools.git import inspect_git_history
-from investigator.investigation.evidence import (
-    build_git_history_evidence,
-    record_evidence,
+from investigator.investigation.manager import InvestigationManager
+from investigator.workflow.bootstrap import (
+    run_adaptive_investigation,
 )
 
 
 def main() -> None:
-    investigation = Investigation(
-        investigation_id="INV-001",
-        problem="Investigate unexpected system behavior.",
-    )
+    manager = InvestigationManager()
 
-    result = inspect_git_history(".", limit=5)
-    print("=========== inspect git history ===========: \n", result)
-    print(type(result))
+    investigation = run_adaptive_investigation(manager=manager, repository_path=".")
 
-    evidence = build_git_history_evidence(
-        evidence_id="E001",
-        result=result,
-    )
-    print("========== evidence git history ========== :\n", evidence)
-    print(type(evidence))
+    print(f"\nInvestigation: {investigation.investigation_id}")
 
-    record_evidence(
-        investigation,
-        evidence,
-    )
-    
-    print("\n================ investigation evidence ================\n")
-    print(investigation.evidence)
+    print(f"Status: {investigation.status.value}")
+
+    print(f"\nProblem:\n {investigation.problem}")
+
+    print("\nHypotheses:")
+
+    for hypothesis in investigation.hypotheses:
+        print(
+            f"  {hypothesis.hypothesis_id}: "
+            f"{hypothesis.description} "
+            f"({hypothesis.confidence:.2%})"
+        )
+
+    print("\nExperiments:")
+
+    for experiment in investigation.experiments:
+        print(f" {experiment.experiment_id}: {experiment.purpose}")
+
+    print("\nResults:")
+
+    for result in investigation.results:
+        print(f"  {result.experiment_id}: {result.status.value}")
+
+        for observation in result.observations:
+            print(f"    {observation}")
+
+    print("\nEvidence:")
+
+    for evidence in investigation.evidence:
+        print(f"  {evidence.evidence_id}: {evidence.observation}")
 
 
 if __name__ == "__main__":
