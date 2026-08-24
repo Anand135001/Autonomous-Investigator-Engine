@@ -103,26 +103,32 @@ class ExperimentCandidate:
 
     def __post_init__(self) -> None:
         if not 0.0 <= self.expected_information_gain <= 1.0:
-            raise ValueError(
-                "expected_information_gain must be between 0.0 and 1.0"
-            )
+            raise ValueError("expected_information_gain must be between 0.0 and 1.0")
 
         if not 0.0 <= self.hypothesis_coverage <= 1.0:
-            raise ValueError(
-                "hypothesis_coverage must be between 0.0 and 1.0"
-            )
+            raise ValueError("hypothesis_coverage must be between 0.0 and 1.0")
 
         if self.estimated_cost < 0:
-            raise ValueError(
-                "estimated_cost cannot be negative"
-            )
+            raise ValueError("estimated_cost cannot be negative")
 
         if self.timeout_seconds <= 0:
-            raise ValueError(
-                "timeout_seconds must be greater than zero"
-            )
+            raise ValueError("timeout_seconds must be greater than zero")
 
         if not self.target_hypothesis_ids:
-            raise ValueError(
-                "target_hypothesis_ids cannot be empty"
-            )
+            raise ValueError("target_hypothesis_ids cannot be empty")
+
+
+@dataclass
+class ExperimentContract:
+    """Execution request that must pass validation."""
+
+    experiment_id: str
+    purpose: str
+    target_hypothesis_id: str
+    rationale: str
+    allowed_tools: list[str]
+    timeout_seconds: int
+    estimated_cost: float
+    risk_level: str
+    input_artifacts: list[str] = field(default_factory=list)
+    expected_outputs: list[str] = field(default_factory=list)

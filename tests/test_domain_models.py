@@ -9,7 +9,8 @@ from investigator.domain.models import (
     Hypothesis,
     Investigation,
     InvestigationStatus,
-    ExperimentCandidate
+    ExperimentCandidate,
+    ExperimentContract
 )
 
 
@@ -100,3 +101,35 @@ def test_experiment_candidate_rejects_invalid_information_gain() -> None:
             risk_level="low",
             timeout_seconds=60,
         )
+
+
+def test_experiment_contract_accepts_valid_values() -> None:
+    contract = ExperimentContract(
+        experiment_id="EXP-001",
+        purpose="Inspect recent source changes",
+        target_hypothesis_id="H1",
+        rationale="Recent changes may explain the regression.",
+        allowed_tools=["git"],
+        timeout_seconds=30,
+        estimated_cost=1.0,
+        risk_level="low",
+    )
+
+    assert contract.experiment_id == "EXP-001"
+    assert contract.allowed_tools == ["git"]
+
+
+def test_experiment_contract_stores_expected_outputs() -> None:
+    contract = ExperimentContract(
+        experiment_id="EXP-001",
+        purpose="Inspect recent source changes",
+        target_hypothesis_id="H1",
+        rationale="Test recent code changes.",
+        allowed_tools=["git"],
+        timeout_seconds=30,
+        estimated_cost=1.0,
+        risk_level="low",
+        expected_outputs=["diff_stat"],
+        )
+
+    assert contract.expected_outputs == ["diff_stat"]

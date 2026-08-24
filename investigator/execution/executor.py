@@ -6,9 +6,20 @@ from investigator.domain.models import (
     ExperimentStatus,
 )
 
+from investigator.domain.models import ExperimentContract
+from investigator.execution.validator import ExperimentValidator
+
 
 class ExperimentExecutor:
     """Executes approved investigation experiments."""
+
+    def __init__(self, validator: ExperimentValidator | None = None) -> None:
+        self.validator = (
+            validator
+            if validator is not None
+            else ExperimentValidator()
+        )
+
 
     def execute(self, experiment: Experiment, repository_path: str,) -> ExperimentResult:
         try:
