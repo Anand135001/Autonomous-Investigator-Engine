@@ -1,13 +1,13 @@
 from investigator.investigation.manager import InvestigationManager
-from investigator.workflow.bootstrap import (
-    run_adaptive_investigation,
-)
-
+from investigator.workflow.bootstrap import run_adaptive_investigation
+from investigator.planning.candidates import DeterministicCandidateGenerator
 
 def main() -> None:
     manager = InvestigationManager()
 
-    investigation = run_adaptive_investigation(manager=manager, repository_path=".")
+    candidate_generator = DeterministicCandidateGenerator()
+
+    investigation = run_adaptive_investigation(manager=manager, repository_path=".", candidate_generator=candidate_generator)
 
     print(f"\nInvestigation: {investigation.investigation_id}")
 
