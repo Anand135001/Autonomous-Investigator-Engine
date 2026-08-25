@@ -1,7 +1,7 @@
 from investigator.domain.models import ExperimentCandidate, Investigation
 
 
-class CandidateGenerator:
+class DeterministicCandidateGenerator:
     """Generates safe experiment candidates from investigation state."""
 
     def generate(self, investigation: Investigation) -> list[ExperimentCandidate]:

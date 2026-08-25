@@ -11,9 +11,10 @@ from investigator.domain.models import(
     Evidence,
 )
 
-from investigator.planning.candidates import CandidateGenerator
+from investigator.planning.candidates import DeterministicCandidateGenerator
 from investigator.planning.planner import ExperimentPlanner
 from investigator.execution.executor import ExperimentExecutor
+from investigator.planning.generator import CandidateGenerator
 
 MAX_EXPERIMENTS = 5
 
@@ -234,7 +235,7 @@ def should_resolve(experiment: Experiment, result: ExperimentResult) -> bool:
     )
 
 
-def run_adaptive_investigation(manager: InvestigationManager, repository_path: str) -> Investigation:
+def run_adaptive_investigation(manager: InvestigationManager, repository_path: str, candidate_generator: CandidateGenerator) -> Investigation:
 
     investigation = manager.create(
         investigation_id="INV-002",
@@ -292,7 +293,6 @@ def run_adaptive_investigation(manager: InvestigationManager, repository_path: s
         ),
     )
 
-    candidate_generator = CandidateGenerator()
     planner = ExperimentPlanner()
     executor = ExperimentExecutor()
 

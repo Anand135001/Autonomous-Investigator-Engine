@@ -1,5 +1,5 @@
 from investigator.domain.models import Hypothesis, Investigation
-from investigator.planning.candidates import CandidateGenerator
+from investigator.planning.candidates import DeterministicCandidateGenerator
 
 
 def test_candidate_generator_creates_git_diff_candidate() -> None:
@@ -25,7 +25,7 @@ def test_candidate_generator_creates_git_diff_candidate() -> None:
         ],
     )
 
-    generator = CandidateGenerator()
+    generator = DeterministicCandidateGenerator()
 
     candidates = generator.generate(investigation)
 
