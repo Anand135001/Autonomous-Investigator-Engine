@@ -10,7 +10,8 @@ from investigator.domain.models import (
     Investigation,
     InvestigationStatus,
     ExperimentCandidate,
-    ExperimentContract
+    ExperimentContract,
+    ExperimentCapability
 )
 
 
@@ -133,3 +134,39 @@ def test_experiment_contract_stores_expected_outputs() -> None:
         )
 
     assert contract.expected_outputs == ["diff_stat"]
+
+
+def test_experiment_capability_accepts_valid_values() -> None:
+    capability = ExperimentCapability(
+        capability_id="EXP-GIT-DIFF",
+        name="Git revision comparison",
+        description=(
+            "Compare the latest two Git revisions."
+        ),
+        target_hypothesis_types=[
+            "preprocessing",
+            "model_implementation",
+        ],
+        allowed_tools=["git"],
+        risk_level="low",
+        timeout_seconds=30,
+        estimated_cost=1.0,
+        expected_outputs=["diff_stat"],
+    )
+
+    assert capability.capability_id == "EXP-GIT-DIFF"
+    assert capability.allowed_tools == ["git"]
+
+
+def test_experiment_capability_rejects_invalid_risk() -> None:
+    with pytest.raises(ValueError):
+        ExperimentCapability(
+            capability_id="EXP-001",
+            name="Invalid",
+            description="Invalid capability.",
+            target_hypothesis_types=["H1"],
+            allowed_tools=["git"],
+            risk_level="critical",
+            timeout_seconds=30,
+            estimated_cost=1.0,
+        )

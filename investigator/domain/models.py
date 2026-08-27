@@ -87,6 +87,41 @@ class Investigation:
 
 
 @dataclass
+class ExperimentCapability:
+    """An experiment the system knows how to execute."""
+
+    capability_id: str
+    name: str
+    description: str
+    target_hypothesis_types: list[str]
+    allowed_tools: list[str]
+    risk_level: str
+    timeout_seconds: int
+    estimated_cost: float
+    expected_outputs: list[str] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        if not self.capability_id.strip():
+            raise ValueError("capability_id cannot be empty")
+
+        if not self.name.strip():
+            raise ValueError("name cannot be empty")
+
+        if self.risk_level not in {
+            "low",
+            "medium",
+            "high",
+        }:
+            raise ValueError("risk_level must be low, medium, or high")
+
+        if self.timeout_seconds <= 0:
+            raise ValueError("timeout_seconds must be greater than zero")
+
+        if self.estimated_cost < 0:
+            raise ValueError("estimated_cost cannot be negative")
+
+
+@dataclass
 class ExperimentCandidate:
     """ candidate experiment considered during planning."""
 
@@ -132,3 +167,4 @@ class ExperimentContract:
     risk_level: str
     input_artifacts: list[str] = field(default_factory=list)
     expected_outputs: list[str] = field(default_factory=list)
+
