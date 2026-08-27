@@ -6,6 +6,7 @@ from investigator.domain.models import InvestigationStatus
 from investigator.investigation.manager import InvestigationManager
 from investigator.workflow.bootstrap import run_initial_investigation, run_adaptive_investigation
 from investigator.domain.models import ExperimentStatus
+from investigator.planning.candidates import DeterministicCandidateGenerator
 
 
 def initialize_git_repository(path: Path) -> None:
@@ -126,16 +127,18 @@ def test_adaptive_investigation_selects_and_executes_experiment(tmp_path: Path,)
     )
 
     manager = InvestigationManager()
+    candidate_generator = DeterministicCandidateGenerator()
 
     investigation = run_adaptive_investigation(
         manager=manager,
         repository_path=str(tmp_path),
+        candidate_generator=candidate_generator
     )
 
-    assert len(investigation.experiments) == 1
+    assert len(investigation.experiments) == 3
     assert (investigation.experiments[0].experiment_id == "EXP-GIT-DIFF")
 
-    assert len(investigation.results) == 1
+    assert len(investigation.results) == 3
 
     assert (investigation.results[0].status == ExperimentStatus.SUCCEEDED)
 

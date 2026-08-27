@@ -4,6 +4,7 @@ from investigator.domain.models import (
     Investigation,
 )
 from investigator.reasoning.gemini import GeminiReasoner
+from investigator.planning.default_capabilities import build_default_registry
 
 
 def test_prompt_contains_investigation_state() -> None:
@@ -26,11 +27,15 @@ def test_prompt_contains_investigation_state() -> None:
         ],
     )
 
+    registry = build_default_registry()
+    
     prompt = GeminiReasoner._build_prompt(
-        investigation
+        investigation,
+        registry.all()        
     )
 
     assert "Validation accuracy dropped." in prompt
     assert "H1" in prompt
     assert "Preprocessing regression" in prompt
     assert "preprocess.py changed" in prompt
+    assert "EXP-GIT-DIFF" in prompt

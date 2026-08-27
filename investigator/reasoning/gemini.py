@@ -5,6 +5,7 @@ from google.genai import types
 
 from investigator.domain.models import Investigation
 from investigator.reasoning.schemas import ExperimentProposal
+from investigator.domain.models import Investigation, ExperimentCapability
 
 
 DEFAULT_MODEL = "gemini-3.6-flash"
@@ -31,9 +32,12 @@ class GeminiReasoner:
         self.client = genai.Client(api_key=api_key)
 
 
-    def propose_experiments(self, investigation: Investigation) -> ExperimentProposal:
+    def propose_experiments(self, investigation: Investigation, capabilities: list[ExperimentCapability]) -> ExperimentProposal:
 
-        prompt = self._build_prompt(investigation)
+        prompt = self._build_prompt(
+            investigation,
+            capabilities,
+            )
 
         response = self.client.models.generate_content(
             model=self.model,
@@ -51,7 +55,7 @@ class GeminiReasoner:
     
 
     @staticmethod
-    def _build_prompt(investigation: Investigation) -> str:
+    def _build_prompt(investigation: Investigation, capabilities: list[ExperimentCapability]) -> str:
 
         hypotheses = "\n".join(
             (
@@ -76,6 +80,25 @@ class GeminiReasoner:
                 f"{experiment.purpose}"
             )
             for experiment in investigation.experiments
+        )
+
+        capability_text = "\n".join(
+            (
+                f"- ID: {capability.capability_id}\n"
+                f"  Name: {capability.name}\n"
+                f"  Description: {capability.description}\n"
+                f"  Hypothesis types: "
+                f"{capability.target_hypothesis_types}\n"
+                f"  Allowed tools: "
+                f"{capability.allowed_tools}\n"
+                f"  Risk: {capability.risk_level}\n"
+                f"  Timeout: "
+                f"{capability.timeout_seconds}s\n"
+                f"  Cost: {capability.estimated_cost}\n"
+                f"  Outputs: "
+                f"{capability.expected_outputs}"
+            )
+            for capability in capabilities
         )
 
         return f"""
@@ -124,4 +147,15 @@ For each experiment:
 Do not repeat experiments that have already been completed.
 Prefer experiments that are informative, cheap, safe,
 and relevant to the current uncertainty.
+
+AVAILABLE CAPABILITIES
+
+You may propose ONLY experiments that correspond
+to one of the capabilities below.
+
+{capability_text}
+
+Do not invent experiment types.
+Do not invent tools.
+Do not request tools not listed by a capability.
 """
