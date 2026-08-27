@@ -1,11 +1,15 @@
-from investigator.domain.models import(
+from investigator.planning.default_capabilities import build_default_registry
+
+from investigator.domain.models import (
     Evidence,
     Hypothesis,
-    Investigation
+    Investigation,
 )
 from investigator.reasoning.gemini import GeminiReasoner
 
+
 def main() -> None:
+
     investigation = Investigation(
         investigation_id="GEMINI-TEST-001",
         problem=(
@@ -25,7 +29,9 @@ def main() -> None:
             ),
             Hypothesis(
                 hypothesis_id="H3",
-                description="Learning-rate/configuration issue",
+                description=(
+                    "Learning-rate/configuration issue"
+                ),
                 confidence=0.21,
             ),
             Hypothesis(
@@ -35,7 +41,9 @@ def main() -> None:
             ),
             Hypothesis(
                 hypothesis_id="H5",
-                description="Model implementation regression",
+                description=(
+                    "Model implementation regression"
+                ),
                 confidence=0.10,
             ),
         ],
@@ -53,19 +61,32 @@ def main() -> None:
 
     reasoner = GeminiReasoner()
 
-    proposal = reasoner.propose_experiments(investigation)
+    registry = build_default_registry()
+     
+    proposal = reasoner.propose_experiments(
+        investigation,
+        registry.all()
+    )
 
     print("\nGemini proposed:")
     
     for candidate in proposal.candidates:
         print(f"\n{candidate.experiment_id}")
+
         print(f"Purpose: {candidate.purpose}")
-        print(f"Targets: {candidate.target_hypothesis_ids}")
+
+        print(f"Targets:{candidate.target_hypothesis_ids}")
+
         print(f"Reason: {candidate.rationale}")
+
         print(f"Information gain:{candidate.expected_information_gain}")
-        print(f"Coverage:{candidate.hypothesis_coverage}")
+
+        print(f"Coverage: {candidate.hypothesis_coverage}")
+
         print(f"Cost: {candidate.estimated_cost}")
+
         print(f"Risk: {candidate.risk_level}")
+
         print(f"Tools: {candidate.allowed_tools}")
 
 
