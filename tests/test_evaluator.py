@@ -29,6 +29,11 @@ def test_evaluator_identifies_correct_root_cause() -> None:
                 initial_confidence=0.7,
             ),
         ],
+        capabilities=[
+            "EXP-GIT-DIFF",
+            "EXP-PREPROCESS-COMPARE",
+            "EXP-REPRODUCE",
+        ],
     )
 
     investigation = Investigation(

@@ -20,3 +20,4 @@ class BenchmarkCase:
     root_cause_description: str
     expected_reproduction: bool
     hypotheses: list[BenchmarkHypothesis]
+    capabilities: list[str]

@@ -27,6 +27,12 @@ def test_load_benchmark_case(tmp_path: Path) -> None:
                         "initial_confidence": 0.3,
                     },
                 ],
+
+                "capabilities": [
+                    "EXP-GIT-DIFF",
+                    "EXP-PREPROCESS-COMPARE",
+                    "EXP-REPRODUCE",
+                ],                    
             }
         ),
         encoding="utf-8",
@@ -37,3 +43,8 @@ def test_load_benchmark_case(tmp_path: Path) -> None:
     assert case.case_id == "test-case"
     assert case.root_cause_hypothesis_id == "H1"
     assert len(case.hypotheses) == 2
+    assert case.capabilities == [
+       "EXP-GIT-DIFF",
+       "EXP-PREPROCESS-COMPARE",
+       "EXP-REPRODUCE",
+    ]

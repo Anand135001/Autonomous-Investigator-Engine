@@ -4,6 +4,7 @@
   "root_cause_hypothesis_id": "H1",
   "root_cause_description": "Preprocessing regression",
   "expected_reproduction": true,
+
   "hypotheses": [
     {
       "hypothesis_id": "H1",
@@ -30,5 +31,11 @@
       "description": "Model implementation regression",
       "initial_confidence": 0.10
     }
+  ],
+
+  "capabilities": [
+    "EXP-GIT-DIFF",
+    "EXP-PREPROCESS-COMPARE",
+    "EXP-REPRODUCE"
   ]
 }

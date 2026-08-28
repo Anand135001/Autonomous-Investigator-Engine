@@ -27,14 +27,9 @@ def load_case(path: str) -> BenchmarkCase:
     return BenchmarkCase(
         case_id=data["case_id"],
         problem=data["problem"],
-        root_cause_hypothesis_id=(
-            data["root_cause_hypothesis_id"]
-        ),
-        root_cause_description=(
-            data["root_cause_description"]
-        ),
-        expected_reproduction=(
-            data["expected_reproduction"]
-        ),
+        root_cause_hypothesis_id=(data["root_cause_hypothesis_id"]),
+        root_cause_description=(data["root_cause_description"]),
+        expected_reproduction=(data["expected_reproduction"]),
         hypotheses=hypotheses,
+        capabilities=data["capabilities"],
     )
