@@ -1,13 +1,20 @@
 from investigator.investigation.manager import InvestigationManager
 from investigator.workflow.bootstrap import run_adaptive_investigation
 from investigator.planning.candidates import DeterministicCandidateGenerator
+from investigator.reasoning.deterministic_analyzer import DeterministicResultAnalyzer
 
 def main() -> None:
     manager = InvestigationManager()
 
     candidate_generator = DeterministicCandidateGenerator()
+    result_analyzer = DeterministicResultAnalyzer()
 
-    investigation = run_adaptive_investigation(manager=manager, repository_path=".", candidate_generator=candidate_generator)
+    investigation = run_adaptive_investigation(
+        manager=manager,
+        repository_path=".", 
+        candidate_generator=candidate_generator,
+        result_analyzer=result_analyzer
+        )
 
     print(f"\nInvestigation: {investigation.investigation_id}")
 
