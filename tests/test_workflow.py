@@ -126,6 +126,31 @@ def test_adaptive_investigation_selects_and_executes_experiment(tmp_path: Path,)
         "change preprocessing",
     )
 
+    benchmark_dir = (
+        tmp_path
+        / "benchmark"
+        / "preprocessing_regression"
+    )
+    
+    benchmark_dir.mkdir(parents=True)
+    
+    (benchmark_dir / "known_good_stats.txt").write_text(
+        "mean=0.02\nstd=0.99\n",
+        encoding="utf-8",
+    )
+    
+    (benchmark_dir / "current_stats.txt").write_text(
+        "mean=0.73\nstd=1.81\n",
+        encoding="utf-8",
+    )
+    
+    (benchmark_dir / "reproduction_result.txt").write_text(
+        "known_good_preprocessing_accuracy=73.1\n"
+        "failed_preprocessing_accuracy=41.2\n"
+        "reproduction=PASS\n",
+        encoding="utf-8",
+    )
+         
     manager = InvestigationManager()
     candidate_generator = DeterministicCandidateGenerator()
 
@@ -142,7 +167,7 @@ def test_adaptive_investigation_selects_and_executes_experiment(tmp_path: Path,)
 
     assert (investigation.results[0].status == ExperimentStatus.SUCCEEDED)
 
-    assert len(investigation.evidence) == 2
+    assert len(investigation.evidence) == 5
 
     h1 = next(
         hypothesis
@@ -150,7 +175,7 @@ def test_adaptive_investigation_selects_and_executes_experiment(tmp_path: Path,)
         if hypothesis.hypothesis_id == "H1"
     )
 
-    assert h1.confidence == 0.45
+    assert h1.confidence == 0.96
 
     total_confidence = sum(
         hypothesis.confidence

@@ -300,11 +300,34 @@ def run_adaptive_investigation(manager: InvestigationManager, repository_path: s
 
         candidates = candidate_generator.generate(investigation)
 
+        print("\nGemini candidates:")
+
+        for candidate in candidates:
+            print(f"  {candidate.experiment_id}:{candidate.purpose}")
+        
+            print(f"    information_gain={candidate.expected_information_gain:.2f}")
+        
+            print(f"   coverage={candidate.hypothesis_coverage:.2f}")
+        
+            print(f"   cost={candidate.estimated_cost:.2f}")
+        
+            print(f"   risk={candidate.risk_level}")
+        
         if not candidates:
             manager.mark_inconclusive(investigation)
             break
 
         selected_candidate = (planner.select_next_experiment(candidates))
+
+        print(
+            f"\nSelected experiment: "
+            f"{selected_candidate.experiment_id}"
+        )
+        
+        print(
+            f"Reason: "
+            f"{selected_candidate.rationale}"
+        )
 
         experiment = candidate_to_experiment(selected_candidate)
 
