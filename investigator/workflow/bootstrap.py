@@ -15,6 +15,7 @@ from investigator.planning.candidates import DeterministicCandidateGenerator
 from investigator.planning.planner import ExperimentPlanner
 from investigator.execution.executor import ExperimentExecutor
 from investigator.planning.generator import CandidateGenerator
+from investigator.investigation.beliefs import BeliefUpdater
 
 MAX_EXPERIMENTS = 5
 
@@ -235,7 +236,11 @@ def should_resolve(experiment: Experiment, result: ExperimentResult) -> bool:
     )
 
 
-def run_adaptive_investigation(manager: InvestigationManager, repository_path: str, candidate_generator: CandidateGenerator) -> Investigation:
+def run_adaptive_investigation(
+        manager: InvestigationManager,
+        repository_path: str,
+        candidate_generator: CandidateGenerator,
+        result_analyzer) -> Investigation:
 
     investigation = manager.create(
         investigation_id="INV-002",
@@ -295,6 +300,7 @@ def run_adaptive_investigation(manager: InvestigationManager, repository_path: s
 
     planner = ExperimentPlanner()
     executor = ExperimentExecutor()
+    belief_updater = BeliefUpdater()
 
     for _ in range(MAX_EXPERIMENTS):
 
@@ -335,6 +341,14 @@ def run_adaptive_investigation(manager: InvestigationManager, repository_path: s
 
         result = executor.execute(experiment, repository_path)
 
+        assessment = result_analyzer.analyze(investigation, result)
+        
+        belief_updater.update(
+            manager,
+            investigation,
+            assessment,
+        )
+        
         manager.add_result(investigation, result)
 
         for evidence in result_to_evidence(result):
