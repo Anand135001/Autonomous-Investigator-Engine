@@ -7,6 +7,7 @@ from investigator.investigation.manager import InvestigationManager
 from investigator.workflow.bootstrap import run_initial_investigation, run_adaptive_investigation
 from investigator.domain.models import ExperimentStatus
 from investigator.planning.candidates import DeterministicCandidateGenerator
+from investigator.reasoning.deterministic_analyzer import DeterministicResultAnalyzer
 
 
 def initialize_git_repository(path: Path) -> None:
@@ -153,11 +154,13 @@ def test_adaptive_investigation_selects_and_executes_experiment(tmp_path: Path,)
          
     manager = InvestigationManager()
     candidate_generator = DeterministicCandidateGenerator()
+    result_analyzer =  DeterministicResultAnalyzer()
 
     investigation = run_adaptive_investigation(
         manager=manager,
         repository_path=str(tmp_path),
-        candidate_generator=candidate_generator
+        candidate_generator=candidate_generator,
+        result_analyzer=result_analyzer
     )
 
     assert len(investigation.experiments) == 3
