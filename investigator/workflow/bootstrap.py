@@ -240,41 +240,18 @@ def run_adaptive_investigation(
         manager: InvestigationManager,
         repository_path: str,
         candidate_generator: CandidateGenerator,
-        result_analyzer) -> Investigation:
+        result_analyzer,
+        investigation_id: str,
+        problem: str,
+        hypotheses: list[Hypothesis]
+        ) -> Investigation:
 
     investigation = manager.create(
-        investigation_id="INV-002",
-        problem="Validation accuracy dropped unexpectedly.",
+        investigation_id=investigation_id,
+        problem=problem
     )
 
-    hypotheses = [
-        Hypothesis(
-            hypothesis_id="H1",
-            description="Preprocessing regression",
-            confidence=0.31,
-        ),
-        Hypothesis(
-            hypothesis_id="H2",
-            description="Dataset distribution shift",
-            confidence=0.26,
-        ),
-        Hypothesis(
-            hypothesis_id="H3",
-            description="Learning-rate/configuration issue",
-            confidence=0.21,
-        ),
-        Hypothesis(
-            hypothesis_id="H4",
-            description="Label corruption",
-            confidence=0.12,
-        ),
-        Hypothesis(
-            hypothesis_id="H5",
-            description="Model implementation regression",
-            confidence=0.10,
-        ),
-    ]
-
+    
     for hypothesis in hypotheses:
         manager.add_hypothesis(
             investigation,
