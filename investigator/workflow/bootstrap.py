@@ -241,22 +241,8 @@ def run_adaptive_investigation(
         repository_path: str,
         candidate_generator: CandidateGenerator,
         result_analyzer,
-        investigation_id: str,
-        problem: str,
-        hypotheses: list[Hypothesis]
+        investigation: Investigation,
         ) -> Investigation:
-
-    investigation = manager.create(
-        investigation_id=investigation_id,
-        problem=problem
-    )
-
-    
-    for hypothesis in hypotheses:
-        manager.add_hypothesis(
-            investigation,
-            hypothesis,
-        )
 
     manager.start(investigation)
 
