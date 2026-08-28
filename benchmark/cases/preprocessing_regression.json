@@ -1,0 +1,34 @@
+{
+  "case_id": "preprocessing_regression",
+  "problem": "Validation accuracy dropped from 72.4% to 41.2%. Determine the cause.",
+  "root_cause_hypothesis_id": "H1",
+  "root_cause_description": "Preprocessing regression",
+  "expected_reproduction": true,
+  "hypotheses": [
+    {
+      "hypothesis_id": "H1",
+      "description": "Preprocessing regression",
+      "initial_confidence": 0.31
+    },
+    {
+      "hypothesis_id": "H2",
+      "description": "Dataset distribution shift",
+      "initial_confidence": 0.26
+    },
+    {
+      "hypothesis_id": "H3",
+      "description": "Learning-rate/configuration issue",
+      "initial_confidence": 0.21
+    },
+    {
+      "hypothesis_id": "H4",
+      "description": "Label corruption",
+      "initial_confidence": 0.12
+    },
+    {
+      "hypothesis_id": "H5",
+      "description": "Model implementation regression",
+      "initial_confidence": 0.10
+    }
+  ]
+}
