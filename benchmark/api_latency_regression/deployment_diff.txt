@@ -1,0 +1,11 @@
+src/checkout/orders.py
+
+Before:
+query_orders() -> 1 query
+
+After:
+for item in cart_items:
+    query_orders(item.id)
+
+Observed:
+1 request -> 47 database queries

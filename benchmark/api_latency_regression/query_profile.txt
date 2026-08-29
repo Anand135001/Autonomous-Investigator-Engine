@@ -1,0 +1,7 @@
+baseline_query_count=2
+regressed_query_count=47
+
+baseline_db_time_ms=35
+regressed_db_time_ms=1320
+
+pattern=N+1
