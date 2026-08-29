@@ -56,4 +56,77 @@ def build_default_registry() -> CapabilityRegistry:
         )
     )
 
+    registry.register(
+        ExperimentCapability(
+            capability_id="PERF-CODE-DIFF",
+            name="Deployment code comparison",
+            description=(
+                "Inspect source changes associated with the "
+                "deployment and identify suspicious performance-related changes."
+            ),
+            target_hypothesis_types=[
+                "database",
+                "application_code",
+                "performance",
+            ],
+            allowed_tools=["git"],
+            risk_level="low",
+            timeout_seconds=30,
+            estimated_cost=1.0,
+            expected_outputs=[
+                "changed_files",
+                "performance_related_changes",
+            ],
+        )
+    )
+    
+    registry.register(
+        ExperimentCapability(
+            capability_id="PERF-QUERY-PROFILE",
+            name="Database query profile comparison",
+            description=(
+                "Compare baseline and regressed database query counts "
+                "and execution time."
+            ),
+            target_hypothesis_types=[
+                "database",
+                "performance",
+            ],
+            allowed_tools=["filesystem"],
+            risk_level="low",
+            timeout_seconds=30,
+            estimated_cost=1.5,
+            expected_outputs=[
+                "query_count",
+                "database_time",
+            ],
+        )
+    )
+    
+    registry.register(
+        ExperimentCapability(
+            capability_id="PERF-REPRODUCE",
+            name="API latency reproduction",
+            description=(
+                "Reproduce the latency difference between the "
+                "baseline and regressed implementation."
+            ),
+            target_hypothesis_types=[
+                "database",
+                "performance",
+                "application_code",
+            ],
+            allowed_tools=["python"],
+            risk_level="low",
+            timeout_seconds=60,
+            estimated_cost=3.0,
+            expected_outputs=[
+                "baseline_latency",
+                "regressed_latency",
+                "fixed_latency",
+                "reproduction_status",
+            ],
+        )
+    )
+     
     return registry

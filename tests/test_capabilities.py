@@ -11,7 +11,7 @@ def test_registry_starts_empty() -> None:
 def test_registry_can_register_capability() -> None:
     registry = build_default_registry()
     capabilities = registry.all()
-    assert len(capabilities) == 3
+    assert len(capabilities) == 6
 
 
 def test_registry_can_lookup_capability() -> None:
@@ -33,3 +33,13 @@ def test_duplicate_capability_is_rejected() -> None:
 
     with pytest.raises(ValueError):
         registry.register(capability)
+
+
+def test_registry_contains_performance_capabilities() -> None:
+    registry = build_default_registry()
+
+    assert registry.get("PERF-CODE-DIFF").name == "Deployment code comparison"
+
+    assert registry.get("PERF-QUERY-PROFILE").name == "Database query profile comparison"
+
+    assert registry.get("PERF-REPRODUCE").name == "API latency reproduction"
