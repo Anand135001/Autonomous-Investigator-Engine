@@ -6,7 +6,6 @@ from investigator.domain.models import (
     ExperimentStatus,
 )
 
-from investigator.domain.models import ExperimentContract
 from investigator.execution.validator import ExperimentValidator
 
 
@@ -41,6 +40,25 @@ class ExperimentExecutor:
                     repository_path,
                 )
 
+            if experiment.experiment_id == "PERF-CODE-DIFF":
+                return self._run_performance_code_diff(
+                    experiment,
+                    repository_path,
+                )
+            
+            if experiment.experiment_id == "PERF-QUERY-PROFILE":
+                return self._run_performance_query_profile(
+                    experiment,
+                    repository_path,
+                )
+            
+            if experiment.experiment_id == "PERF-REPRODUCE":
+                return self._run_performance_reproduce(
+                    experiment,
+                    repository_path,
+                )
+            
+            
             return ExperimentResult(
                 experiment_id=experiment.experiment_id,
                 status=ExperimentStatus.FAILED,
@@ -107,13 +125,68 @@ class ExperimentExecutor:
             / "reproduction_result.txt"
         )
 
-        result = result_file.read_text(
-            encoding="utf-8"
-        ).strip()
+        result = result_file.read_text(encoding="utf-8").strip()
 
         return ExperimentResult(
             experiment_id=experiment.experiment_id,
             status=ExperimentStatus.SUCCEEDED,
             observations=[result,],
+            artifacts=[str(result_file)],
+        )
+
+
+    def _run_performance_code_diff(self, experiment,repository_path: str) -> ExperimentResult:
+
+        result_file = (
+            Path(repository_path)
+            / "benchmark"
+            / "api_latency_regression"
+            / "deployment_diff.txt"
+        )
+    
+        result = result_file.read_text(encoding="utf-8").strip()
+    
+        return ExperimentResult(
+            experiment_id=experiment.experiment_id,
+            status=ExperimentStatus.SUCCEEDED,
+            observations=[result],
+            artifacts=[str(result_file)],
+        )
+    
+    
+    def _run_performance_query_profile(self, experiment, repository_path: str) -> ExperimentResult:
+    
+        result_file = (
+            Path(repository_path)
+            / "benchmark"
+            / "api_latency_regression"
+            / "query_profile.txt"
+        )
+    
+        result = result_file.read_text(encoding="utf-8").strip()
+    
+        return ExperimentResult(
+            experiment_id=experiment.experiment_id,
+            status=ExperimentStatus.SUCCEEDED,
+            observations=[result],
+            artifacts=[str(result_file)],
+        )
+    
+    
+    def _run_performance_reproduce(self, experiment, repository_path: str) -> ExperimentResult:
+    
+        result_file = (
+            Path(repository_path)
+            / "benchmark"
+            / "api_latency_regression"
+            / "reproduction_result.txt"
+        )
+    
+        result = result_file.read_text(encoding="utf-8").strip()
+    
+        return ExperimentResult(
+            experiment_id=experiment.experiment_id,
+            status=ExperimentStatus.SUCCEEDED,
+            observations=[result],
             artifacts=[str(result_file)],
         )

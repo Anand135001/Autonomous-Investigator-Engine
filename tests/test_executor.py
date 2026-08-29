@@ -169,3 +169,117 @@ def test_executor_runs_reproduction(tmp_path: Path) -> None:
 
     assert result.status == ExperimentStatus.SUCCEEDED
     assert "reproduction=PASS" in result.observations[0]
+
+
+def test_performance_code_diff_experiment(tmp_path: Path) -> None:
+
+    benchmark_dir = (
+        tmp_path
+        / "benchmark"
+        / "api_latency_regression"
+    )
+
+    benchmark_dir.mkdir(parents=True)
+
+    (benchmark_dir / "deployment_diff.txt").write_text(
+        "1 request -> 47 database queries\n"
+        "pattern=N+1\n",
+        encoding="utf-8",
+    )
+
+    experiment = Experiment(
+        experiment_id="PERF-CODE-DIFF",
+        purpose="Inspect deployment changes",
+        target_hypothesis_id="H1",
+        rationale="Test deployment changes.",
+        estimated_cost=1.0,
+        timeout_seconds=30,
+        risk_level="low",
+    )
+
+    executor = ExperimentExecutor()
+
+    result = executor.execute(
+        experiment,
+        str(tmp_path),
+    )
+
+    assert result.status == ExperimentStatus.SUCCEEDED
+    assert "N+1" in result.observations[0]
+
+
+def test_performance_query_profile_experiment(tmp_path: Path) -> None:
+
+    benchmark_dir = (
+        tmp_path
+        / "benchmark"
+        / "api_latency_regression"
+    )
+
+    benchmark_dir.mkdir(parents=True)
+
+    (benchmark_dir / "query_profile.txt").write_text(
+        "baseline_query_count=2\n"
+        "regressed_query_count=47\n"
+        "pattern=N+1\n",
+        encoding="utf-8",
+    )
+
+    experiment = Experiment(
+        experiment_id="PERF-QUERY-PROFILE",
+        purpose="Compare database query profiles",
+        target_hypothesis_id="H1",
+        rationale="Test database regression.",
+        estimated_cost=1.5,
+        timeout_seconds=30,
+        risk_level="low",
+    )
+
+    executor = ExperimentExecutor()
+
+    result = executor.execute(
+        experiment,
+        str(tmp_path),
+    )
+
+    assert result.status == ExperimentStatus.SUCCEEDED
+    assert "regressed_query_count=47" in (result.observations[0])
+
+
+def test_performance_reproduction_experiment(tmp_path: Path) -> None:
+
+    benchmark_dir = (
+        tmp_path
+        / "benchmark"
+        / "api_latency_regression"
+    )
+
+    benchmark_dir.mkdir(parents=True)
+
+    (benchmark_dir / "reproduction_result.txt").write_text(
+        "baseline_p95_ms=180\n"
+        "regressed_p95_ms=1700\n"
+        "fixed_p95_ms=191\n"
+        "reproduction=PASS\n",
+        encoding="utf-8",
+    )
+
+    experiment = Experiment(
+        experiment_id="PERF-REPRODUCE",
+        purpose="Reproduce API latency regression",
+        target_hypothesis_id="H1",
+        rationale="Verify database regression.",
+        estimated_cost=3.0,
+        timeout_seconds=60,
+        risk_level="low",
+    )
+
+    executor = ExperimentExecutor()
+
+    result = executor.execute(
+        experiment,
+        str(tmp_path),
+    )
+
+    assert result.status == ExperimentStatus.SUCCEEDED
+    assert "reproduction=PASS" in (result.observations[0])
