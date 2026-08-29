@@ -158,7 +158,6 @@ def test_unknown_hypothesis_is_filtered() -> None:
     assert candidates == []
 
 
-
 def test_unknown_capability_is_filtered() -> None:
     proposal = ExperimentProposal(
         candidates=[
@@ -251,5 +250,109 @@ def test_unsupported_tool_is_filtered() -> None:
     )
 
     candidates = generator.generate(make_investigation())
+
+    assert candidates == []
+
+
+def test_performance_capability_is_accepted() -> None:
+    proposal = ExperimentProposal(
+        candidates=[
+            make_proposal(
+                "PERF-CODE-DIFF",
+                ["H1"],
+            )
+        ]
+    )
+
+    registry = build_default_registry()
+
+    generator = GeminiCandidateGenerator(
+        reasoner=FakeGeminiReasoner(proposal),
+        capabilities=[
+            registry.get("PERF-CODE-DIFF"),
+            registry.get("PERF-QUERY-PROFILE"),
+            registry.get("PERF-REPRODUCE"),
+        ],
+    )
+
+    candidates = generator.generate(make_performance_investigation())
+
+    assert len(candidates) == 1
+
+    assert (candidates[0].experiment_id == "PERF-CODE-DIFF")
+
+
+def make_performance_investigation() -> Investigation:
+    return Investigation(
+        investigation_id="INV-PERF",
+        problem=(
+            "The checkout API p95 latency increased "
+            "from 180ms to 1700ms."
+        ),
+        hypotheses=[
+            Hypothesis(
+                hypothesis_id="H1",
+                description=(
+                    "Database query regression caused "
+                    "an N+1 query pattern."
+                ),
+                confidence=0.28,
+            ),
+            Hypothesis(
+                hypothesis_id="H2",
+                description=(
+                    "Cache hit rate dropped significantly."
+                ),
+                confidence=0.24,
+            ),
+            Hypothesis(
+                hypothesis_id="H3",
+                description=(
+                    "A downstream network dependency "
+                    "became slow."
+                ),
+                confidence=0.20,
+            ),
+            Hypothesis(
+                hypothesis_id="H4",
+                description=(
+                    "Application CPU contention increased."
+                ),
+                confidence=0.16,
+            ),
+            Hypothesis(
+                hypothesis_id="H5",
+                description=(
+                    "The new deployment introduced "
+                    "an inefficient code path."
+                ),
+                confidence=0.12,
+            ),
+        ],
+    )
+
+
+def test_ml_capability_is_not_available_to_performance_case() -> None:
+    proposal = ExperimentProposal(
+        candidates=[
+            make_proposal(
+                "EXP-PREPROCESS-COMPARE",
+                ["H1"],
+            )
+        ]
+    )
+
+    registry = build_default_registry()
+
+    generator = GeminiCandidateGenerator(
+        reasoner=FakeGeminiReasoner(proposal),
+        capabilities=[
+            registry.get("PERF-CODE-DIFF"),
+            registry.get("PERF-QUERY-PROFILE"),
+            registry.get("PERF-REPRODUCE"),
+        ],
+    )
+
+    candidates = generator.generate(make_performance_investigation())
 
     assert candidates == []
