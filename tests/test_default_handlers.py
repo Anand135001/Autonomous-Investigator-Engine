@@ -23,3 +23,11 @@ def test_performance_handlers_are_registered() -> None:
     ).__class__.__name__ == (
         "PerformanceReproduceHandler"
     )
+
+
+def test_git_handler_is_registered() -> None:
+    registry = build_default_handler_registry()
+
+    assert registry.get(
+        "EXP-GIT-DIFF"
+    ).__class__.__name__ == "GitDiffHandler"

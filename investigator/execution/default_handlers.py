@@ -6,10 +6,32 @@ from investigator.execution.performance import (
     PerformanceQueryProfileHandler,
     PerformanceReproduceHandler,
 )
+from investigator.execution.git_handler import(
+    GitDiffHandler,
+)
+from investigator.execution.ml_handlers import(
+    PreprocessingCompareHandler,
+    PreprocessingReproduceHandler
+)
 
 
 def build_default_handler_registry() -> HandlerRegistry:
     registry = HandlerRegistry()
+
+    registry.register(
+        "EXP-GIT-DIFF",
+        GitDiffHandler(),
+    )
+
+    registry.register(
+        "EXP-PREPROCESS-COMPARE",
+        PreprocessingCompareHandler(),
+    )
+    
+    registry.register(
+        "EXP-REPRODUCE",
+        PreprocessingReproduceHandler(),
+    )
 
     registry.register(
         "PERF-CODE-DIFF",

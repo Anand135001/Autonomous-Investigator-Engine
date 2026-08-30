@@ -1,5 +1,3 @@
-from pathlib import Path
-from investigator.tools.git import compare_git_revisions
 from investigator.domain.models import (
     Experiment,
     ExperimentResult,
@@ -7,186 +5,53 @@ from investigator.domain.models import (
 )
 
 from investigator.execution.validator import ExperimentValidator
-
+from investigator.execution.default_handlers import build_default_handler_registry
+from investigator.execution.handlers import HandlerRegistry
 
 class ExperimentExecutor:
     """Executes approved investigation experiments."""
 
-    def __init__(self, validator: ExperimentValidator | None = None) -> None:
+    def __init__(
+        self,
+        validator: ExperimentValidator | None = None,
+        handler_registry: HandlerRegistry | None = None,
+    )-> None:
         self.validator = (
             validator
             if validator is not None
             else ExperimentValidator()
         )
 
+        self.handler_registry = (
+            handler_registry
+            if handler_registry is not None
+            else build_default_handler_registry()
+        )
 
-    def execute(self, experiment: Experiment, repository_path: str,) -> ExperimentResult:
+
+    def execute(
+        self,
+        experiment: Experiment,
+        repository_path: str,
+    ) -> ExperimentResult:
+    
         try:
-            if experiment.experiment_id == "EXP-GIT-DIFF":
-                return self._execute_git_diff(
-                    experiment,
-                    repository_path,
-                )
-
-            if experiment.experiment_id == "EXP-PREPROCESS-COMPARE":
-                return self._execute_preprocessing_compare(
-                    experiment,
-                    repository_path,
-                )
-
-            if experiment.experiment_id == "EXP-REPRODUCE":
-                return self._execute_reproduction(
-                    experiment,
-                    repository_path,
-                )
-
-            if experiment.experiment_id == "PERF-CODE-DIFF":
-                return self._run_performance_code_diff(
-                    experiment,
-                    repository_path,
-                )
-            
-            if experiment.experiment_id == "PERF-QUERY-PROFILE":
-                return self._run_performance_query_profile(
-                    experiment,
-                    repository_path,
-                )
-            
-            if experiment.experiment_id == "PERF-REPRODUCE":
-                return self._run_performance_reproduce(
-                    experiment,
-                    repository_path,
-                )
-            
-            
-            return ExperimentResult(
-                experiment_id=experiment.experiment_id,
-                status=ExperimentStatus.FAILED,
-                error=(
-                    "No executor is registered for experiment "
-                    f"{experiment.experiment_id}"
-                ),
+            self.validator.validate(
+                experiment,
             )
-
+    
+            handler = self.handler_registry.get(
+                experiment.experiment_id,
+            )
+    
+            return handler.execute(
+                experiment,
+                repository_path,
+            )
+    
         except Exception as exc:
             return ExperimentResult(
                 experiment_id=experiment.experiment_id,
                 status=ExperimentStatus.FAILED,
                 error=str(exc),
             )
-
-    def _execute_git_diff(self, experiment: Experiment, repository_path: str,) -> ExperimentResult:
-        result = compare_git_revisions(
-            repository_path,
-            "HEAD~1",
-            "HEAD",
-        )
-
-        return ExperimentResult(
-            experiment_id=experiment.experiment_id,
-            status=ExperimentStatus.SUCCEEDED,
-            observations=[result["diff_stat"].strip(),],
-            artifacts=[],
-        )
-
-    def _execute_preprocessing_compare(self, experiment: Experiment, repository_path: str,) -> ExperimentResult:
-        benchmark_dir = (
-            Path(repository_path)
-            / "benchmark"
-            / "preprocessing_regression"
-        )
-
-        good_stats = (
-            benchmark_dir / "known_good_stats.txt"
-        ).read_text(encoding="utf-8").strip()
-
-        current_stats = (
-            benchmark_dir / "current_stats.txt"
-        ).read_text(encoding="utf-8").strip()
-
-        return ExperimentResult(
-            experiment_id=experiment.experiment_id,
-            status=ExperimentStatus.SUCCEEDED,
-            observations=[
-            f"Known-good:\n{good_stats}",
-            f"Current:\n{current_stats}",
-            ],
-            artifacts=[
-                str(benchmark_dir / "known_good_stats.txt"),
-                str(benchmark_dir / "current_stats.txt"),
-            ],
-        )
-
-    def _execute_reproduction(self, experiment: Experiment, repository_path: str,) -> ExperimentResult:
-        result_file = (
-            Path(repository_path)
-            / "benchmark"
-            / "preprocessing_regression"
-            / "reproduction_result.txt"
-        )
-
-        result = result_file.read_text(encoding="utf-8").strip()
-
-        return ExperimentResult(
-            experiment_id=experiment.experiment_id,
-            status=ExperimentStatus.SUCCEEDED,
-            observations=[result,],
-            artifacts=[str(result_file)],
-        )
-
-
-    def _run_performance_code_diff(self, experiment,repository_path: str) -> ExperimentResult:
-
-        result_file = (
-            Path(repository_path)
-            / "benchmark"
-            / "api_latency_regression"
-            / "deployment_diff.txt"
-        )
-    
-        result = result_file.read_text(encoding="utf-8").strip()
-    
-        return ExperimentResult(
-            experiment_id=experiment.experiment_id,
-            status=ExperimentStatus.SUCCEEDED,
-            observations=[result],
-            artifacts=[str(result_file)],
-        )
-    
-    
-    def _run_performance_query_profile(self, experiment, repository_path: str) -> ExperimentResult:
-    
-        result_file = (
-            Path(repository_path)
-            / "benchmark"
-            / "api_latency_regression"
-            / "query_profile.txt"
-        )
-    
-        result = result_file.read_text(encoding="utf-8").strip()
-    
-        return ExperimentResult(
-            experiment_id=experiment.experiment_id,
-            status=ExperimentStatus.SUCCEEDED,
-            observations=[result],
-            artifacts=[str(result_file)],
-        )
-    
-    
-    def _run_performance_reproduce(self, experiment, repository_path: str) -> ExperimentResult:
-    
-        result_file = (
-            Path(repository_path)
-            / "benchmark"
-            / "api_latency_regression"
-            / "reproduction_result.txt"
-        )
-    
-        result = result_file.read_text(encoding="utf-8").strip()
-    
-        return ExperimentResult(
-            experiment_id=experiment.experiment_id,
-            status=ExperimentStatus.SUCCEEDED,
-            observations=[result],
-            artifacts=[str(result_file)],
-        )
