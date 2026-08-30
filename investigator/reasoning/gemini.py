@@ -3,10 +3,19 @@ import os
 from google import genai
 from google.genai import types
 
-from investigator.domain.models import Investigation
-from investigator.reasoning.schemas import ExperimentProposal
-from investigator.domain.models import Investigation, ExperimentCapability, ExperimentResult
-from investigator.reasoning.result_schema import ResultAssessment
+from investigator.domain.models import (
+    ExperimentCapability,
+    ExperimentResult,
+    Investigation,
+)
+from investigator.reasoning.result_schema import (
+    ResultAssessment,
+)
+from investigator.reasoning.schemas import (
+    ExperimentProposal,
+)
+from investigator.reasoning.usage import ModelUsage
+from investigator.reasoning.retry import generate_with_retry
 
 
 DEFAULT_MODEL = "gemini-3.6-flash"
@@ -20,7 +29,10 @@ class GeminiReasoner:
         api_key = os.getenv("GEMINI_API_KEY")
 
         if not api_key:
-            raise RuntimeError("GEMINI_API_KEY environment variable is not set")
+            raise RuntimeError(
+                "GEMINI_API_KEY environment variable "
+                "is not set"
+            )
 
         self.model = (
             model
@@ -30,41 +42,82 @@ class GeminiReasoner:
             )
         )
 
-        self.client = genai.Client(api_key=api_key)
+        self.client = genai.Client(api_key=api_key,)
+        self.usage_records: list[ModelUsage] = []
 
 
-    def propose_experiments(self, investigation: Investigation, capabilities: list[ExperimentCapability]) -> ExperimentProposal:
+    def propose_experiments(
+        self,
+        investigation: Investigation,
+        capabilities: list[ExperimentCapability],
+    ) -> ExperimentProposal:
 
         prompt = self._build_prompt(
             investigation,
             capabilities,
-            )
-
-        response = self.client.models.generate_content(
-            model=self.model,
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json",
-                response_schema=ExperimentProposal,
-            ),
         )
 
+        token_count = self.client.models.count_tokens(
+            model=self.model,
+            contents=prompt,
+        )
+        
+        print(
+            f"[Gemini planning input tokens] "
+            f"{token_count.total_tokens}"
+        )
+
+        response = generate_with_retry(
+            lambda: self.client.models.generate_content(
+                model=self.model,
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                    response_schema=ExperimentProposal,
+                ),
+            )
+        )
+
+        usage = response.usage_metadata
+
+        if usage is not None:
+            self.usage_records.append(
+                ModelUsage(
+                    operation="planning",
+                    input_tokens=usage.prompt_token_count or 0,
+                    output_tokens=usage.candidates_token_count or 0,
+                    thoughts_tokens=usage.thoughts_token_count or 0,
+                    total_tokens=usage.total_token_count or 0,
+                )
+            )
+
+        if response.usage_metadata:
+            print(
+                "[Gemini planning usage]",
+                response.usage_metadata,
+            )
+
         if not response.text:
-            raise RuntimeError("Gemini returned an empty response")
+            raise RuntimeError(
+                "Gemini returned an empty response"
+            )
 
-        return ExperimentProposal.model_validate_json(response.text)
+        return ExperimentProposal.model_validate_json(
+            response.text
+        )
 
-
-    
-    
     @staticmethod
-    def _build_prompt(investigation: Investigation, capabilities: list[ExperimentCapability]) -> str:
+    def _build_prompt(
+        investigation: Investigation,
+        capabilities: list[ExperimentCapability],
+    ) -> str:
 
         hypotheses = "\n".join(
             (
                 f"- {hypothesis.hypothesis_id}: "
                 f"{hypothesis.description} "
-                f"(confidence={hypothesis.confidence:.2f})"
+                f"(confidence="
+                f"{hypothesis.confidence:.2f})"
             )
             for hypothesis in investigation.hypotheses
         )
@@ -88,37 +141,34 @@ class GeminiReasoner:
         capability_text = "\n".join(
             (
                 f"- ID: {capability.capability_id}\n"
-                f"  Name: {capability.name}\n"
-                f"  Description: {capability.description}\n"
-                f"  Hypothesis types: "
-                f"{capability.target_hypothesis_types}\n"
+                f"  Description: "
+                f"{capability.description}\n"
                 f"  Allowed tools: "
                 f"{capability.allowed_tools}\n"
                 f"  Risk: {capability.risk_level}\n"
-                f"  Timeout: "
-                f"{capability.timeout_seconds}s\n"
-                f"  Cost: {capability.estimated_cost}\n"
-                f"  Outputs: "
-                f"{capability.expected_outputs}"
+                f"  Cost: "
+                f"{capability.estimated_cost}\n"
             )
             for capability in capabilities
         )
 
         return f"""
-You are the reasoning component of an autonomous
+You are the planning component of an autonomous
 technical investigation system.
 
-Your job is to propose candidate experiments that
-reduce uncertainty about the current investigation.
+Given the current investigation state and available
+capabilities, propose a small set of experiments that
+reduce uncertainty.
 
-You are NOT allowed to:
-- execute commands
-- claim that a hypothesis is proven
-- invent evidence
-- assume an experiment succeeded
-- bypass safety constraints
-
-You are ONLY proposing experiments.
+Rules:
+- Propose only registered capabilities.
+- experiment_id must exactly match a capability ID.
+- Use only tools allowed by that capability.
+- Do not repeat completed experiments.
+- Target existing hypotheses only.
+- Prefer informative, cheap, and low-risk experiments.
+- Do not execute experiments.
+- Do not invent evidence or hypotheses.
 
 INVESTIGATION
 
@@ -128,116 +178,125 @@ Problem:
 Current hypotheses:
 {hypotheses or "None"}
 
-Evidence collected so far:
+Previous evidence:
 {evidence or "None"}
 
 Experiments already performed:
 {completed_experiments or "None"}
 
-Generate a small set of useful candidate experiments.
-
-For each experiment:
-- explain what it tests
-- identify the target hypotheses
-- explain why it is useful now
-- estimate information gain
-- estimate hypothesis coverage
-- estimate relative cost
-- assign risk level
-- specify required tools
-- give a reasonable timeout
-
-Do not repeat experiments that have already been completed.
-Prefer experiments that are informative, cheap, safe,
-and relevant to the current uncertainty.
-
 AVAILABLE CAPABILITIES
 
-You may propose ONLY experiments that correspond
-to one of the capabilities below.
-
-{capability_text}
-
-Do not invent experiment types.
-Do not invent tools.
-Do not request tools not listed by a capability.
+{capability_text or "None"}
 """
-    
-    def analyze(self, investigation: Investigation, result: ExperimentResult) -> ResultAssessment:
+
+    def analyze(
+        self,
+        investigation: Investigation,
+        result: ExperimentResult,
+    ) -> ResultAssessment:
 
         prompt = self._build_result_assessment_prompt(
             investigation,
             result,
         )
-    
-        response = self.client.models.generate_content(
+
+        token_count = self.client.models.count_tokens(
             model=self.model,
             contents=prompt,
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json",
-                response_schema=ResultAssessment,
-            ),
         )
-    
+        
+        print(
+            f"[Gemini planning input tokens] "
+            f"{token_count.total_tokens}"
+        )
+
+        response = generate_with_retry(
+            lambda: self.client.models.generate_content(
+                model=self.model,
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                    response_schema=ResultAssessment,
+                ),
+            )
+        )
+
+        usage = response.usage_metadata
+
+        if usage is not None:
+            self.usage_records.append(
+                ModelUsage(
+                    operation="analysis",
+                    input_tokens=usage.prompt_token_count or 0,
+                    output_tokens=usage.candidates_token_count or 0,
+                    thoughts_tokens=usage.thoughts_token_count or 0,
+                    total_tokens=usage.total_token_count or 0,
+                )
+            )
+
+        if response.usage_metadata:
+            print(
+                "[Gemini planning usage]",
+                response.usage_metadata,
+            )
+
         if not response.text:
-            raise RuntimeError("Gemini returned an empty result assessment")
-    
-        return ResultAssessment.model_validate_json(response.text)
+            raise RuntimeError(
+                "Gemini returned an empty result assessment"
+            )
 
-
+        return ResultAssessment.model_validate_json(
+            response.text
+        )
 
     @staticmethod
-    def _build_result_assessment_prompt(investigation: Investigation, result: ExperimentResult) -> str:
-    
+    def _build_result_assessment_prompt(
+        investigation: Investigation,
+        result: ExperimentResult,
+    ) -> str:
+
         hypotheses = "\n".join(
             (
                 f"- {hypothesis.hypothesis_id}: "
                 f"{hypothesis.description} "
-                f"(confidence={hypothesis.confidence:.3f})"
+                f"(confidence="
+                f"{hypothesis.confidence:.3f})"
             )
             for hypothesis in investigation.hypotheses
         )
-    
-        evidence = "\n".join(
+
+        previous_evidence = "\n".join(
             (
                 f"- {item.evidence_id}: "
                 f"{item.observation}"
             )
             for item in investigation.evidence
+            if item.experiment_id != result.experiment_id
         )
-    
+
         observations = "\n".join(
             f"- {observation}"
             for observation in result.observations
         )
-    
+
         return f"""
 You are the result-analysis component of an
-autonomous technical investigation engine.
+autonomous technical investigation system.
 
-The system just executed one experiment.
+Analyze the latest experiment result using the
+current investigation state.
 
-Your task is to interpret the observed result and
-update the investigation's beliefs.
-
-You MUST:
-- reason only from the supplied evidence
-- assess every known hypothesis
-- assign confidence values between 0.0 and 1.0
-- explain how the result affects each hypothesis
-- determine whether more investigation is needed
-- identify the most useful next uncertainty to investigate
-
-You MUST NOT:
-- invent evidence
-- claim an experiment succeeded when it failed
-- modify files
-- execute tools
-- invent hypotheses that are not already present
-
-IMPORTANT:
-The confidence values should form a normalized
-distribution across the hypotheses.
+Rules:
+- Assess every known hypothesis.
+- Use only supplied evidence.
+- Do not invent evidence or hypotheses.
+- Do not execute tools or modify anything.
+- Assign each hypothesis a confidence from 0.0 to 1.0.
+- Confidence values must form a normalized distribution.
+- Decide whether the evidence is sufficient to verify
+  the leading hypothesis.
+- If verification is insufficient, identify the most
+  useful next uncertainty.
 
 INVESTIGATION PROBLEM:
 {investigation.problem}
@@ -245,10 +304,11 @@ INVESTIGATION PROBLEM:
 CURRENT HYPOTHESES:
 {hypotheses}
 
-EVIDENCE SO FAR:
-{evidence or "None"}
+PREVIOUS EVIDENCE:
+{previous_evidence or "None"}
 
 CURRENT EXPERIMENT RESULT:
+
 Experiment ID:
 {result.experiment_id}
 
@@ -260,6 +320,4 @@ Observations:
 
 Error:
 {result.error or "None"}
-
-Assess the result carefully.
 """
