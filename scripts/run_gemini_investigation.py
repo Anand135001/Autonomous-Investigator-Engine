@@ -1,3 +1,6 @@
+import argparse
+from pathlib import Path
+
 from investigator.investigation.manager import InvestigationManager
 from investigator.planning.default_capabilities import build_default_registry
 from investigator.reasoning.candidate_generator import GeminiCandidateGenerator
@@ -6,7 +9,36 @@ from investigator.workflow.bootstrap import run_adaptive_investigation
 from investigator.benchmark.loader import load_case
 from investigator.investigation.factory import create_from_benchmark
 
+
+def _resolve_case_path(case: str) -> Path:
+    project_root = Path(__file__).resolve().parents[1]
+    case_path = Path(case)
+
+    if case_path.suffix != ".json":
+        case_path = (
+            project_root
+            / "benchmark"
+            / "cases"
+            / f"{case}.json"
+        )
+    elif not case_path.is_absolute():
+        case_path = project_root / case_path
+
+    return case_path
+
+
 def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--case",
+        default="preprocessing_regression",
+        help="Benchmark case id or path to a benchmark case JSON file.",
+    )
+    args = parser.parse_args()
+
+    project_root = Path(__file__).resolve().parents[1]
+    case = load_case(str(_resolve_case_path(args.case)))
+
     manager = InvestigationManager()
 
     registry = build_default_registry()
@@ -21,8 +53,6 @@ def main() -> None:
         reasoner=reasoner,
         capabilities=available_capabilities,
     )
-
-    case = load_case("benchmark/cases/preprocessing_regression.json")
     
     investigation = create_from_benchmark(
         manager,
@@ -31,7 +61,7 @@ def main() -> None:
 
     investigation = run_adaptive_investigation(
         manager=manager,
-        repository_path=".", 
+        repository_path=str(project_root),
         candidate_generator=candidate_generator,
         result_analyzer=reasoner,
         investigation=investigation,
