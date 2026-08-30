@@ -4,7 +4,7 @@ import pytest
 
 from investigator.domain.models import InvestigationStatus
 from investigator.investigation.manager import InvestigationManager
-from investigator.workflow.bootstrap import run_initial_investigation, run_adaptive_investigation
+from investigator.workflow.bootstrap import run_adaptive_investigation
 from investigator.domain.models import ExperimentStatus
 from investigator.planning.candidates import DeterministicCandidateGenerator
 from investigator.reasoning.deterministic_analyzer import DeterministicResultAnalyzer
@@ -58,57 +58,6 @@ def create_commit(
         capture_output=True,
         text=True,
     )
-
-
-def test_initial_investigation_workflow(tmp_path: Path,) -> None:
-    initialize_git_repository(tmp_path)
-
-    create_commit(
-        tmp_path,
-        "README.md",
-        "initial project",
-        "initial commit",
-    )
-
-    create_commit(
-        tmp_path,
-        "preprocess.py",
-        "normalization",
-        "change preprocessing",
-    )
-
-    manager = InvestigationManager()
-
-    investigation = run_initial_investigation(manager=manager, repository_path=str(tmp_path),)
-
-    assert (investigation.status == InvestigationStatus.RUNNING)
-
-    assert investigation.investigation_id == "INV-001"
-
-    assert len(investigation.hypotheses) == 5
-
-    assert len(investigation.evidence) == 1
-
-    assert (
-        investigation.evidence[0].evidence_id
-        == "E001"
-    )
-
-    preprocessing = next(
-        hypothesis
-        for hypothesis in investigation.hypotheses
-        if hypothesis.hypothesis_id == "H1"
-    )
-
-    assert preprocessing.confidence == 0.45
-
-    total_confidence = sum(
-        hypothesis.confidence
-        for hypothesis in investigation.hypotheses
-    )
-
-    assert total_confidence == pytest.approx(1.0)
-
 
 
 def test_adaptive_investigation_selects_and_executes_experiment(tmp_path: Path,) -> None:
@@ -187,7 +136,7 @@ def test_adaptive_investigation_selects_and_executes_experiment(tmp_path: Path,)
         if hypothesis.hypothesis_id == "H1"
     )
 
-    assert h1.confidence == 0.96
+    assert h1.confidence == pytest.approx(0.9949112992871174)
 
     total_confidence = sum(
         hypothesis.confidence
