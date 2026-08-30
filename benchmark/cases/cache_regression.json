@@ -1,0 +1,37 @@
+{
+  "case_id": "cache_regression",
+  "problem": "Checkout API p95 latency increased from 180ms to 1200ms after the latest deployment. Determine the cause.",
+  "root_cause_hypothesis_id": "H1",
+  "root_cause_description": "A cache regression caused the application to miss the cache for most requests.",
+  "expected_reproduction": false,
+  "hypotheses": [
+    {
+      "hypothesis_id": "H1",
+      "description": "A cache regression caused the application to miss the cache for most requests.",
+      "initial_confidence": 0.28
+    },
+    {
+      "hypothesis_id": "H2",
+      "description": "A database query regression caused the latency increase.",
+      "initial_confidence": 0.24
+    },
+    {
+      "hypothesis_id": "H3",
+      "description": "A downstream network dependency became slow.",
+      "initial_confidence": 0.20
+    },
+    {
+      "hypothesis_id": "H4",
+      "description": "Application CPU contention increased.",
+      "initial_confidence": 0.16
+    },
+    {
+      "hypothesis_id": "H5",
+      "description": "The new deployment introduced an inefficient application code path.",
+      "initial_confidence": 0.12
+    }
+  ],
+  "capabilities": [
+    "CACHE-METRICS"
+  ]
+}
