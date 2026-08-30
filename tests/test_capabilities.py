@@ -11,7 +11,7 @@ def test_registry_starts_empty() -> None:
 def test_registry_can_register_capability() -> None:
     registry = build_default_registry()
     capabilities = registry.all()
-    assert len(capabilities) == 6
+    assert len(capabilities) == 7
 
 
 def test_registry_can_lookup_capability() -> None:
@@ -43,3 +43,17 @@ def test_registry_contains_performance_capabilities() -> None:
     assert registry.get("PERF-QUERY-PROFILE").name == "Database query profile comparison"
 
     assert registry.get("PERF-REPRODUCE").name == "API latency reproduction"
+
+
+def test_cache_metrics_capability_is_registered() -> None:
+    registry = build_default_registry()
+
+    capability = registry.get("CACHE-METRICS")
+
+    assert capability.name == ("Cache metrics inspection")
+
+    assert capability.allowed_tools == [
+        "filesystem"
+    ]
+
+    assert capability.risk_level == "low"

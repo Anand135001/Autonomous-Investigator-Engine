@@ -13,6 +13,8 @@ from investigator.execution.ml_handlers import(
     PreprocessingCompareHandler,
     PreprocessingReproduceHandler
 )
+from investigator.execution.cache import CacheMetricsHandler
+
 
 
 def build_default_handler_registry() -> HandlerRegistry:
@@ -46,6 +48,11 @@ def build_default_handler_registry() -> HandlerRegistry:
     registry.register(
         "PERF-REPRODUCE",
         PerformanceReproduceHandler(),
+    )
+
+    registry.register(
+        "CACHE-METRICS",
+        CacheMetricsHandler(),
     )
 
     return registry

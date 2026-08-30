@@ -128,5 +128,30 @@ def build_default_registry() -> CapabilityRegistry:
             ],
         )
     )
+
+
+    registry.register(
+        ExperimentCapability(
+            capability_id="CACHE-METRICS",
+            name="Cache metrics inspection",
+            description=(
+                "Compare baseline and current cache hit rate, "
+                "misses, and related cache metrics to determine "
+                "whether cache behavior changed."
+            ),
+            target_hypothesis_types=[
+                "cache",
+                "performance",
+            ],
+            allowed_tools=["filesystem"],
+            risk_level="low",
+            timeout_seconds=30,
+            estimated_cost=1.0,
+            expected_outputs=[
+                "hit_rate",
+                "miss_count",
+            ],
+        )
+    )
      
     return registry

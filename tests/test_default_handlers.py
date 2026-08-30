@@ -31,3 +31,16 @@ def test_git_handler_is_registered() -> None:
     assert registry.get(
         "EXP-GIT-DIFF"
     ).__class__.__name__ == "GitDiffHandler"
+
+
+
+def test_cache_metrics_handler_is_registered() -> None:
+    registry = build_default_handler_registry()
+
+    handler = registry.get(
+        "CACHE-METRICS"
+    )
+
+    assert handler.__class__.__name__ == (
+        "CacheMetricsHandler"
+    )

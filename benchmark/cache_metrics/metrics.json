@@ -1,0 +1,12 @@
+{
+  "baseline": {
+    "hit_rate": 0.94,
+    "miss_count": 120,
+    "request_count": 2000
+  },
+  "current": {
+    "hit_rate": 0.21,
+    "miss_count": 1820,
+    "request_count": 2310
+  }
+}
