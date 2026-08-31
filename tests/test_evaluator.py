@@ -14,6 +14,7 @@ def test_evaluator_identifies_correct_root_cause() -> None:
     case = BenchmarkCase(
         case_id="test",
         problem="Something failed.",
+        repository_path=".",
         root_cause_hypothesis_id="H1",
         root_cause_description="Preprocessing regression",
         expected_reproduction=True,

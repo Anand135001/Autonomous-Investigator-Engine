@@ -1,6 +1,7 @@
 {
   "case_id": "api_latency_regression",
   "problem": "The checkout API p95 latency increased from 180ms to 1700ms after the latest deployment. Determine the cause.",
+  "repository_path": "benchmark/fixtures/checkout-service",
   "root_cause_hypothesis_id": "H1",
   "root_cause_description": "A database query regression caused an N+1 query pattern.",
   "expected_reproduction": true,

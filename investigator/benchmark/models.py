@@ -16,6 +16,7 @@ class BenchmarkCase:
 
     case_id: str
     problem: str
+    repository_path: str
     root_cause_hypothesis_id: str
     root_cause_description: str
     expected_reproduction: bool

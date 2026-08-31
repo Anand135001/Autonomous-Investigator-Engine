@@ -18,6 +18,7 @@ def test_evaluate_successful_run() -> None:
     case = BenchmarkCase(
         case_id="test-case",
         problem="Something failed.",
+        repository_path=".",
         root_cause_hypothesis_id="H1",
         root_cause_description="Cause A",
         expected_reproduction=True,

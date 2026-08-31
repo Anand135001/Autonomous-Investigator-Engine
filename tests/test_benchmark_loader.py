@@ -12,6 +12,7 @@ def test_load_benchmark_case(tmp_path: Path) -> None:
             {
                 "case_id": "test-case",
                 "problem": "Something failed.",
+                "repository_path": "benchmark/fixtures/test-service",
                 "root_cause_hypothesis_id": "H1",
                 "root_cause_description": "Cause A",
                 "expected_reproduction": True,

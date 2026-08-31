@@ -8,6 +8,7 @@ from investigator.reasoning.gemini import GeminiReasoner
 from investigator.workflow.bootstrap import run_adaptive_investigation
 from investigator.benchmark.loader import load_case
 from investigator.investigation.factory import create_from_benchmark
+from scripts.setup_benchmark_fixtures import main as setup_fixtures
 
 
 def _resolve_case_path(case: str) -> Path:
@@ -37,7 +38,12 @@ def main() -> None:
     args = parser.parse_args()
 
     project_root = Path(__file__).resolve().parents[1]
-    case = load_case(str(_resolve_case_path(args.case)))
+
+    setup_fixtures()
+
+    case = load_case(
+        str(_resolve_case_path(args.case))
+    )
 
     manager = InvestigationManager()
 
@@ -59,9 +65,13 @@ def main() -> None:
         case,
     )
 
+    repository_path = (
+        project_root / case.repository_path
+    )
+    
     investigation = run_adaptive_investigation(
         manager=manager,
-        repository_path=str(project_root),
+        repository_path=str(repository_path),
         candidate_generator=candidate_generator,
         result_analyzer=reasoner,
         investigation=investigation,

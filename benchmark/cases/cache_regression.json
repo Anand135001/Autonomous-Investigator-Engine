@@ -1,6 +1,7 @@
 {
   "case_id": "cache_regression",
   "problem": "Checkout API p95 latency increased from 180ms to 1200ms after the latest deployment. Determine the cause.",
+  "repository_path": "benchmark/fixtures/cache-service",
   "root_cause_hypothesis_id": "H1",
   "root_cause_description": "A cache regression caused the application to miss the cache for most requests.",
   "expected_reproduction": false,

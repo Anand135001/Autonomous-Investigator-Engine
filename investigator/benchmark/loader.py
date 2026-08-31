@@ -32,4 +32,5 @@ def load_case(path: str) -> BenchmarkCase:
         expected_reproduction=(data["expected_reproduction"]),
         hypotheses=hypotheses,
         capabilities=data["capabilities"],
+        repository_path=data["repository_path"],
     )

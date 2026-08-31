@@ -1,0 +1,6 @@
+{
+  "cases": [
+    "api_latency_regression",
+    "cache_regression"
+  ]
+}

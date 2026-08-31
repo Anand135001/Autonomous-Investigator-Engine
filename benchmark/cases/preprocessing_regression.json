@@ -1,6 +1,7 @@
 {
   "case_id": "preprocessing_regression",
   "problem": "Validation accuracy dropped from 72.4% to 41.2%. Determine the cause.",
+  "repository_path": "benchmark/fixtures/preprocessing-service",
   "root_cause_hypothesis_id": "H1",
   "root_cause_description": "Preprocessing regression",
   "expected_reproduction": true,

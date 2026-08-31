@@ -10,6 +10,7 @@ def test_create_investigation_from_benchmark() -> None:
     case = BenchmarkCase(
         case_id="test-case",
         problem="Something failed.",
+        repository_path=".",
         root_cause_hypothesis_id="H1",
         root_cause_description="Cause A",
         expected_reproduction=True,
