@@ -1,0 +1,57 @@
+{
+  "case_id": "api_latency_regression",
+  "status": "resolved",
+  "root_cause": "N+1 database query regression",
+  "confidence": 0.98,
+  "events": [
+    {
+      "agent": "fleet_commander",
+      "type": "delegation",
+      "target_agent": "code_investigator"
+    },
+    {
+      "agent": "code_investigator",
+      "type": "tool_call",
+      "tool": "inspect_deployment_diff"
+    },
+    {
+      "agent": "code_investigator",
+      "type": "finding",
+      "summary": "Per-item database query introduced.",
+      "evidence": [
+        "query_orders(item.id)"
+      ]
+    },
+    {
+      "agent": "code_investigator",
+      "type": "delegation",
+      "target_agent": "runtime_investigator"
+    },
+    {
+      "agent": "runtime_investigator",
+      "type": "tool_call",
+      "tool": "reproduce_performance"
+    },
+    {
+      "agent": "runtime_investigator",
+      "type": "finding",
+      "summary": "Query count increased from 1 to 47.",
+      "evidence": [
+        "baseline_query_count=1",
+        "regressed_query_count=47"
+      ]
+    },
+    {
+      "agent": "runtime_investigator",
+      "type": "delegation",
+      "target_agent": "evidence_verifier"
+    },
+    {
+      "agent": "evidence_verifier",
+      "type": "verification",
+      "result": "VERIFIED",
+      "root_cause": "H1",
+      "confidence": 0.98
+    }
+  ]
+}
