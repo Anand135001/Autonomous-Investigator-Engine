@@ -1,5 +1,7 @@
 # Investigation Fleet Architecture
 
+![Investigation Fleet Architecture](images/architecture.png)
+
 ## 1. System Architecture
 
 ```mermaid

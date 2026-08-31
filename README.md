@@ -210,6 +210,12 @@ Conclusion
 
 # Google Cloud Architecture
 
+![Investigation Fleet Architecture](docs/images/architecture.png)
+
+The system separates orchestration, specialist investigation, diagnostic
+tool execution, evidence verification, and persistent state into distinct
+components.
+
 The hosted service runs on Google Cloud.
 
 ```text
