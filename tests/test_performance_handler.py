@@ -7,6 +7,7 @@ from investigator.domain.models import (
 )
 from investigator.execution.performance import (
     PerformanceCodeDiffHandler,
+    PerformanceReproduceHandler,
 )
 
 
@@ -75,9 +76,7 @@ def _commit(
     )
 
 
-def test_performance_code_diff_uses_real_git(
-    tmp_path: Path,
-) -> None:
+def test_performance_code_diff_uses_real_git(tmp_path: Path,) -> None:
 
     _init_repo(tmp_path)
 
@@ -143,4 +142,60 @@ def load_orders(cart_items, db):
     assert (
         "for item in cart_items"
         in combined_output
+    )
+
+
+def test_performance_reproduce_executes_benchmark(tmp_path: Path,) -> None:
+
+    benchmark_file = (
+        tmp_path / "benchmark_latency.py"
+    )
+
+    benchmark_file.write_text(
+        """
+print("baseline_p95_ms=20")
+print("regressed_p95_ms=940")
+print("baseline_query_count=1")
+print("regressed_query_count=47")
+""".strip(),
+        encoding="utf-8",
+    )
+
+    experiment = Experiment(
+        experiment_id="PERF-REPRODUCE",
+        purpose="Reproduce performance regression",
+        target_hypothesis_id="H1",
+        rationale="Measure actual regression.",
+        estimated_cost=3.0,
+        timeout_seconds=30,
+        risk_level="low",
+        allowed_tools=["python"],
+    )
+
+    handler = PerformanceReproduceHandler()
+
+    result = handler.execute(
+        experiment,
+        str(tmp_path),
+    )
+
+    assert result.status == (
+        ExperimentStatus.SUCCEEDED
+    )
+
+    output = result.observations[0]
+
+    assert (
+        "baseline_p95_ms=20"
+        in output
+    )
+
+    assert (
+        "regressed_p95_ms=940"
+        in output
+    )
+
+    assert (
+        "regressed_query_count=47"
+        in output
     )

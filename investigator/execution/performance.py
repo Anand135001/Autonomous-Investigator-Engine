@@ -1,5 +1,5 @@
 from pathlib import Path
-
+import subprocess
 from investigator.domain.models import (
     Experiment,
     ExperimentResult,
@@ -84,7 +84,7 @@ class PerformanceQueryProfileHandler:
 
 
 class PerformanceReproduceHandler:
-    """Execute PERF-REPRODUCE."""
+    """Execute PERF-REPRODUCE using the benchmark program."""
 
     def execute(
         self,
@@ -92,20 +92,52 @@ class PerformanceReproduceHandler:
         repository_path: str,
     ) -> ExperimentResult:
 
-        result_file = (
+        benchmark_file = (
             Path(repository_path)
-            / "benchmark"
-            / "api_latency_regression"
-            / "reproduction_result.txt"
+            / "benchmark_latency.py"
+        ).resolve()
+
+        if not benchmark_file.exists():
+            raise FileNotFoundError(
+                f"Benchmark program does not exist: "
+                f"{benchmark_file}"
+            )
+
+        completed = subprocess.run(
+            [
+                "python",
+                str(benchmark_file),
+            ],
+            cwd=repository_path,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=experiment.timeout_seconds,
         )
 
-        result = result_file.read_text(
-            encoding="utf-8"
-        ).strip()
+        if completed.returncode != 0:
+            return ExperimentResult(
+                experiment_id=experiment.experiment_id,
+                status=ExperimentStatus.FAILED,
+                observations=[],
+                artifacts=[
+                    str(benchmark_file)
+                ],
+                error=(
+                    completed.stderr.strip()
+                    or "Benchmark execution failed."
+                ),
+            )
+
+        output = completed.stdout.strip()
 
         return ExperimentResult(
             experiment_id=experiment.experiment_id,
             status=ExperimentStatus.SUCCEEDED,
-            observations=[result],
-            artifacts=[str(result_file)],
+            observations=[
+                output
+            ],
+            artifacts=[
+                str(benchmark_file)
+            ],
         )
