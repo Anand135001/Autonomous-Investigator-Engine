@@ -106,7 +106,7 @@ def compare_git_revisions(repository_path: str, base_revision: str, target_revis
     if not target_revision.strip():
         raise ValueError("target_revision cannot be empty")
 
-    command = [
+    stat_command = [
         "git",
         "-C",
         str(repository),
@@ -115,27 +115,52 @@ def compare_git_revisions(repository_path: str, base_revision: str, target_revis
         base_revision,
         target_revision,
     ]
-
+    
+    diff_command = [
+        "git",
+        "-C",
+        str(repository),
+        "diff",
+        base_revision,
+        target_revision,
+    ]
+    
     try:
-        completed = subprocess.run(
-            command,
+        stat_completed = subprocess.run(
+            stat_command,
             capture_output=True,
             text=True,
             check=False,
         )
+    
+        diff_completed = subprocess.run(
+            diff_command,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    
     except FileNotFoundError as exc:
         raise RuntimeError(
             "Git executable was not found on PATH"
         ) from exc
-
-    if completed.returncode != 0:
+    
+    if stat_completed.returncode != 0:
         raise RuntimeError(
-            f"Git diff failed: {completed.stderr.strip()}"
+            "Git diff --stat failed: "
+            f"{stat_completed.stderr.strip()}"
         )
-
+    
+    if diff_completed.returncode != 0:
+        raise RuntimeError(
+            "Git diff failed: "
+            f"{diff_completed.stderr.strip()}"
+        )
+    
     return {
         "repository": str(repository),
         "base_revision": base_revision,
         "target_revision": target_revision,
-        "diff_stat": completed.stdout,
+        "diff_stat": stat_completed.stdout,
+        "diff": diff_completed.stdout,
     }

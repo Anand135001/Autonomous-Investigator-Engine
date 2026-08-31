@@ -106,45 +106,42 @@ def test_inspect_git_history_rejects_file_path(tmp_path: Path,) -> None:
 
 
 
-def test_compare_git_revisions_returns_diff_stat(tmp_path: Path,) -> None:
+def test_compare_git_revisions_returns_stat_and_diff(
+    tmp_path: Path,
+) -> None:
+
     initialize_git_repository(tmp_path)
 
     create_commit(
         tmp_path,
-        "preprocess.py",
-        "normalization_v1\n",
-        "initial preprocessing",
+        "example.py",
+        "version_one\n",
+        "initial",
     )
-
-    base_revision = subprocess.run(
-        ["git", "rev-parse", "HEAD"],
-        cwd=tmp_path,
-        check=True,
-        capture_output=True,
-        text=True,
-    ).stdout.strip()
 
     create_commit(
         tmp_path,
-        "preprocess.py",
-        "normalization_v2\n",
-        "change preprocessing",
+        "example.py",
+        "version_two\n",
+        "change",
     )
-
-    target_revision = subprocess.run(
-        ["git", "rev-parse", "HEAD"],
-        cwd=tmp_path,
-        check=True,
-        capture_output=True,
-        text=True,
-    ).stdout.strip()
 
     result = compare_git_revisions(
         str(tmp_path),
-        base_revision,
-        target_revision,
+        "HEAD~1",
+        "HEAD",
     )
 
-    assert result["base_revision"] == base_revision
-    assert result["target_revision"] == target_revision
-    assert "preprocess.py" in result["diff_stat"]
+    assert "diff_stat" in result
+    assert "diff" in result
+
+    assert "example.py" in result["diff_stat"]
+    assert (
+        "-version_one"
+        in result["diff"]
+    )
+
+    assert (
+        "+version_two"
+        in result["diff"]
+    )

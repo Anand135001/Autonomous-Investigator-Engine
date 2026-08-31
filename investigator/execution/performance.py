@@ -5,10 +5,13 @@ from investigator.domain.models import (
     ExperimentResult,
     ExperimentStatus,
 )
+from investigator.tools.git import (
+    compare_git_revisions,
+)
 
 
 class PerformanceCodeDiffHandler:
-    """Execute PERF-CODE-DIFF."""
+    """Execute PERF-CODE-DIFF using Git history."""
 
     def execute(
         self,
@@ -16,22 +19,39 @@ class PerformanceCodeDiffHandler:
         repository_path: str,
     ) -> ExperimentResult:
 
-        result_file = (
-            Path(repository_path)
-            / "benchmark"
-            / "api_latency_regression"
-            / "deployment_diff.txt"
+        result = compare_git_revisions(
+            repository_path,
+            "HEAD~1",
+            "HEAD",
         )
 
-        result = result_file.read_text(
-            encoding="utf-8"
+        diff_stat = result.get(
+            "diff_stat",
+            "",
         ).strip()
+
+        diff = result.get(
+            "diff",
+            "",
+        ).strip()
+
+        observations: list[str] = []
+
+        if diff_stat:
+            observations.append(
+                f"Diff statistics:\n{diff_stat}"
+            )
+
+        if diff:
+            observations.append(
+                f"Source changes:\n{diff}"
+            )
 
         return ExperimentResult(
             experiment_id=experiment.experiment_id,
             status=ExperimentStatus.SUCCEEDED,
-            observations=[result],
-            artifacts=[str(result_file)],
+            observations=observations,
+            artifacts=[],
         )
 
 

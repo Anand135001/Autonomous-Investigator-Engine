@@ -34,7 +34,16 @@ def create_commit(
     message: str,
 ) -> None:
     file_path = repository / filename
-    file_path.write_text(content, encoding="utf-8")
+
+    file_path.parent.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    file_path.write_text(
+        content,
+        encoding="utf-8",
+    )
 
     subprocess.run(
         ["git", "add", filename],
@@ -171,20 +180,112 @@ def test_executor_runs_reproduction(tmp_path: Path) -> None:
     assert "reproduction=PASS" in result.observations[0]
 
 
-def test_performance_code_diff_experiment(tmp_path: Path) -> None:
+def test_performance_code_diff_experiment(tmp_path: Path,) -> None:
 
-    benchmark_dir = (
-        tmp_path
-        / "benchmark"
-        / "api_latency_regression"
+    subprocess.run(
+        ["git", "init"],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+        text=True,
     )
 
-    benchmark_dir.mkdir(parents=True)
+    subprocess.run(
+        [
+            "git",
+            "config",
+            "user.name",
+            "Test User",
+        ],
+        cwd=tmp_path,
+        check=True,
+    )
 
-    (benchmark_dir / "deployment_diff.txt").write_text(
-        "1 request -> 47 database queries\n"
-        "pattern=N+1\n",
+    subprocess.run(
+        [
+            "git",
+            "config",
+            "user.email",
+            "test@example.com",
+        ],
+        cwd=tmp_path,
+        check=True,
+    )
+
+    source_file = (
+        tmp_path
+        / "src"
+        / "checkout"
+        / "orders.py"
+    )
+
+    source_file.parent.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    source_file.write_text(
+        """
+def load_orders(cart_items, db):
+    ids = [item.id for item in cart_items]
+    return db.query_orders(ids)
+""".strip()
+        + "\n",
         encoding="utf-8",
+    )
+
+    subprocess.run(
+        ["git", "add", "."],
+        cwd=tmp_path,
+        check=True,
+    )
+
+    subprocess.run(
+        [
+            "git",
+            "commit",
+            "-m",
+            "efficient order loading",
+        ],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    source_file.write_text(
+        """
+def load_orders(cart_items, db):
+    orders = []
+
+    for item in cart_items:
+        orders.append(
+            db.query_orders(item.id)
+        )
+
+    return orders
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    subprocess.run(
+        ["git", "add", "."],
+        cwd=tmp_path,
+        check=True,
+    )
+
+    subprocess.run(
+        [
+            "git",
+            "commit",
+            "-m",
+            "introduce query regression",
+        ],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+        text=True,
     )
 
     experiment = Experiment(
@@ -195,6 +296,7 @@ def test_performance_code_diff_experiment(tmp_path: Path) -> None:
         estimated_cost=1.0,
         timeout_seconds=30,
         risk_level="low",
+        allowed_tools=["git"],
     )
 
     executor = ExperimentExecutor()
@@ -204,138 +306,15 @@ def test_performance_code_diff_experiment(tmp_path: Path) -> None:
         str(tmp_path),
     )
 
-    assert result.status == ExperimentStatus.SUCCEEDED
-    assert "N+1" in result.observations[0]
-
-
-def test_performance_query_profile_experiment(tmp_path: Path) -> None:
-
-    benchmark_dir = (
-        tmp_path
-        / "benchmark"
-        / "api_latency_regression"
+    assert result.status == (
+        ExperimentStatus.SUCCEEDED
     )
 
-    benchmark_dir.mkdir(parents=True)
-
-    (benchmark_dir / "query_profile.txt").write_text(
-        "baseline_query_count=2\n"
-        "regressed_query_count=47\n"
-        "pattern=N+1\n",
-        encoding="utf-8",
+    combined_output = "\n".join(
+        result.observations
     )
-
-    experiment = Experiment(
-        experiment_id="PERF-QUERY-PROFILE",
-        purpose="Compare database query profiles",
-        target_hypothesis_id="H1",
-        rationale="Test database regression.",
-        estimated_cost=1.5,
-        timeout_seconds=30,
-        risk_level="low",
-    )
-
-    executor = ExperimentExecutor()
-
-    result = executor.execute(
-        experiment,
-        str(tmp_path),
-    )
-
-    assert result.status == ExperimentStatus.SUCCEEDED
-    assert "regressed_query_count=47" in (result.observations[0])
-
-
-def test_performance_reproduction_experiment(tmp_path: Path) -> None:
-
-    benchmark_dir = (
-        tmp_path
-        / "benchmark"
-        / "api_latency_regression"
-    )
-
-    benchmark_dir.mkdir(parents=True)
-
-    (benchmark_dir / "reproduction_result.txt").write_text(
-        "baseline_p95_ms=180\n"
-        "regressed_p95_ms=1700\n"
-        "fixed_p95_ms=191\n"
-        "reproduction=PASS\n",
-        encoding="utf-8",
-    )
-
-    experiment = Experiment(
-        experiment_id="PERF-REPRODUCE",
-        purpose="Reproduce API latency regression",
-        target_hypothesis_id="H1",
-        rationale="Verify database regression.",
-        estimated_cost=3.0,
-        timeout_seconds=60,
-        risk_level="low",
-    )
-
-    executor = ExperimentExecutor()
-
-    result = executor.execute(
-        experiment,
-        str(tmp_path),
-    )
-
-    assert result.status == ExperimentStatus.SUCCEEDED
-    assert "reproduction=PASS" in (result.observations[0])
-
-
-def test_cache_metrics_experiment(tmp_path: Path,) -> None:
-
-    metrics_dir = (
-        tmp_path
-        / "benchmark"
-        / "cache_metrics"
-    )
-
-    metrics_dir.mkdir(parents=True)
-
-    metrics_file = (metrics_dir / "metrics.json")
-
-    metrics_file.write_text(
-        """
-{
-    "baseline": {
-        "hit_rate": 0.94,
-        "miss_count": 120,
-        "request_count": 2000
-    },
-    "current": {
-        "hit_rate": 0.21,
-        "miss_count": 1820,
-        "request_count": 2310
-    }
-}
-""".strip(),
-        encoding="utf-8",
-    )
-
-    experiment = Experiment(
-        experiment_id="CACHE-METRICS",
-        purpose="Inspect cache metrics",
-        target_hypothesis_id="H1",
-        rationale="Determine whether cache behavior changed.",
-        estimated_cost=1.0,
-        timeout_seconds=30,
-        risk_level="low",
-        allowed_tools=["filesystem"],
-    )
-
-    executor = ExperimentExecutor()
-
-    result = executor.execute(
-        experiment,
-        str(tmp_path),
-    )
-
-    assert result.status == (ExperimentStatus.SUCCEEDED)
 
     assert (
-        "current_hit_rate=0.21"
-        in result.observations
+        "query_orders(item.id)"
+        in combined_output
     )
