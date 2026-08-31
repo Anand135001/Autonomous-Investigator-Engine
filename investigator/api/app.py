@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, HTTPException, status
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from google.adk.runners import Runner
@@ -318,6 +319,18 @@ async def _run_investigation(
         )
 
 
+@app.get("/")
+async def home() -> FileResponse:
+
+    return FileResponse(
+        _project_root()
+        / "investigator"
+        / "api"
+        / "static"
+        / "index.html"
+    )
+
+
 @app.get("/health")
 async def health() -> dict[str, str]:
     return {"status": "ok"}
@@ -352,11 +365,28 @@ async def create_investigation(
 
     if request.mode == "demo":
 
-        await _run_demo_investigation(
+        store = FleetStateStore()
+    
+        store.save(
             investigation_id,
-            request.case_id,
+            {
+                "investigation_id": investigation_id,
+                "case_id": request.case_id,
+                "status": "running",
+                "mode": "demo",
+                "created_at": _now(),
+                "updated_at": _now(),
+                "events": [],
+            },
         )
     
+        asyncio.create_task(
+            _run_demo_investigation(
+                investigation_id,
+                request.case_id,
+            )
+        )
+
     elif request.mode == "live":
     
         await _run_investigation(
@@ -374,17 +404,13 @@ async def create_investigation(
             ),
         )
     
-    result = FleetStateStore().get(
-        investigation_id
-    )
-    
     return InvestigationResponse(
         investigation_id=investigation_id,
         case_id=request.case_id,
         status=(
-            result["status"]
-            if result is not None
-            else "failed"
+            "running"
+            if request.mode == "demo"
+            else "resolved"
         ),
     )
 
